@@ -97,20 +97,27 @@ const activities: Record<string, any[]> = {
 };
 
 export async function GET(
-  request: NextRequest, // Ubah '_' menjadi 'request' dan tipe menjadi 'NextRequest'
-  { params }: { params: { userId: string } }
+  request: NextRequest,
+  context: { params: { userId: string } } // TERIMA SELURUH CONTEXT SEBAGAI SATU ARGUMEN
 ) {
   try {
+    // AMBIL PARAMS DARI DALAM FUNGSI
+    const { userId } = context.params;
+
     assertAdmin();
-    const info = base.get(params.userId);
+    const info = base.get(userId); // Gunakan userId yang sudah diekstrak
     await new Promise((r) => setTimeout(r, 200));
-    if (!info) return new NextResponse("Not Found", { status: 404 });
-    const acts = (activities[params.userId] || []).sort(
+
+    if (!info) {
+      return new NextResponse("Not Found", { status: 404 });
+    }
+
+    const acts = (activities[userId] || []).sort(
       (a, b) => +new Date(b.at) - +new Date(a.at)
     );
+
     return NextResponse.json({ ...info, activities: acts });
   } catch (e: any) {
-    // Pastikan Anda mengimpor NextResponse di atas
     return new NextResponse(e.message || "Unauthorized", {
       status: e.status || 500,
     });

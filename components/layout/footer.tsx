@@ -23,7 +23,7 @@ export default function Footer() {
               syariat Islam.
             </p>
             <div className="text-sm text-muted-foreground">
-              <p>Barakallahu lakuma wa baaraka 'alaikuma</p>
+              <p>Barakallahu lakuma wa baaraka &apos;alaikuma</p>
             </div>
           </div>
 

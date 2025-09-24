@@ -14,7 +14,11 @@ export function TaarufTabs() {
   const tabs = [
     { id: "inbound" as TabType, label: "CV Masuk", component: InboundList },
     { id: "outbound" as TabType, label: "CV Dikirim", component: OutboundList },
-    { id: "active" as TabType, label: "Ta'aruf Aktif", component: ActiveList },
+    {
+      id: "active" as TabType,
+      label: "Ta&apos;aruf Aktif",
+      component: ActiveList,
+    },
   ];
 
   const ActiveComponent =

@@ -64,7 +64,7 @@ export function AccountDetailModal({
   const getActivityLabel = (activity: any) => {
     switch (activity.type) {
       case "taaruf_ajukan":
-        return `Mengajukan ta'aruf${
+        return `Mengajukan Ta&apos;aruf${
           activity.targetKode ? ` ke ${activity.targetKode}` : ""
         }`;
       case "coin_topup":

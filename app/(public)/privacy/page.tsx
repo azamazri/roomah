@@ -141,7 +141,9 @@ export default function PrivacyPage() {
 
               <ul className="space-y-2">
                 <li>• Dengan persetujuan eksplisit Anda</li>
-                <li>• Untuk memfasilitasi proses ta'aruf yang Anda setujui</li>
+                <li>
+                  • Untuk memfasilitasi proses Ta&apos;aruf yang Anda setujui
+                </li>
                 <li>
                   • Kepada penyedia layanan tepercaya yang membantu operasional
                   platform
@@ -258,7 +260,10 @@ export default function PrivacyPage() {
               <ul className="space-y-2">
                 <li>• Email notifikasi untuk perubahan material</li>
                 <li>• Banner pengumuman di platform</li>
-                <li>• Update tanggal "terakhir diperbarui" di bagian atas</li>
+                <li>
+                  • Update tanggal &quot;terakhir diperbarui&quot; di bagian
+                  atas
+                </li>
               </ul>
             </div>
           </section>

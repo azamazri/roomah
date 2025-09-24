@@ -6,9 +6,9 @@ import FilterBar from "@/components/common/filter-bar";
 import CandidateTeaser from "@/components/common/candidate-teaser";
 
 export const metadata: Metadata = {
-  title: "Roomah - Platform Ta'aruf Islami",
+  title: "Roomah - Platform Ta&apos;aruf Islami",
   description:
-    "Platform Ta'aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah sesuai syariat Islam.",
+    "Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah sesuai syariat Islam.",
 };
 
 interface HomePageProps {
@@ -30,7 +30,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Membangun Peradaban
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Platform Ta'aruf Islami yang membantu Anda menemukan pasangan
+            Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan
             shaleh/shalehah untuk membangun keluarga sakinah.
           </p>
           <Button size="lg" className="rounded-full">
@@ -98,8 +98,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Mengapa Memilih Roomah?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Platform Ta'aruf terpercaya dengan pendekatan Islami yang sesuai
-              syariat
+              Platform Ta&apos;aruf terpercaya dengan pendekatan Islami yang
+              sesuai syariat
             </p>
           </div>
 
@@ -107,11 +107,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div className="text-center">
               <div className="text-4xl mb-4">🤝</div>
               <h3 className="text-xl font-semibold text-foreground mb-3">
-                Ta'aruf Sesuai Syariat
+                Ta&apos;aruf Sesuai Syariat
               </h3>
               <p className="text-muted-foreground">
-                Proses ta'aruf yang sesuai dengan ajaran Islam dan melibatkan
-                keluarga dalam setiap tahapannya.
+                Proses Ta&apos;aruf yang sesuai dengan ajaran Islam dan
+                melibatkan keluarga dalam setiap tahapannya.
               </p>
             </div>
 

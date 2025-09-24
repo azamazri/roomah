@@ -119,7 +119,7 @@ export function OutboundList() {
             <Calendar className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-medium mb-2">Belum Ada CV Dikirim</h3>
-          <p>Anda belum mengajukan Ta'aruf kepada siapapun</p>
+          <p>Anda belum mengajukan Ta&apos;aruf kepada siapapun</p>
         </div>
       </Card>
     );

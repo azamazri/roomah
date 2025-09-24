@@ -137,8 +137,8 @@ export default function KontakPage() {
                     Bagaimana cara mendaftar?
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    Klik "Daftar Gratis" dan lengkapi profil Anda. Tim kami akan
-                    memverifikasi dalam 1-2 hari kerja.
+                    Klik &quot;Daftar Gratis&quot; dan lengkapi profil Anda. Tim
+                    kami akan memverifikasi dalam 1-2 hari kerja.
                   </p>
                 </div>
 

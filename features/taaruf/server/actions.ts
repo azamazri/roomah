@@ -156,7 +156,7 @@ export async function ajukanTaaruf(candidateId: string) {
       return { success: false, error: "INSUFFICIENT_COINS" };
     }
 
-    // WAJIB: memeriksa tidak ada ta'aruf aktif
+    // WAJIB: memeriksa tidak ada Ta&apos;aruf aktif
     if (user.hasActiveTaaruf) {
       return { success: false, error: "ACTIVE_TAARUF_EXISTS" };
     }

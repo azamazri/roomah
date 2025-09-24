@@ -22,7 +22,7 @@ export async function RecentTaaruf() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Heart className="h-4 w-4" />
-          <span>Ta'aruf Terbaru</span>
+          <span>Ta&apos;aruf Terbaru</span>
           <Badge variant="info" className="text-xs">
             {taarufs.length}
           </Badge>
@@ -32,7 +32,7 @@ export async function RecentTaaruf() {
         {taarufs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Heart className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <div className="text-sm">Belum ada ta'aruf baru</div>
+            <div className="text-sm">Belum ada Ta&apos;aruf baru</div>
           </div>
         ) : (
           <div className="space-y-4">

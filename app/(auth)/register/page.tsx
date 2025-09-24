@@ -6,7 +6,7 @@ import { AuthFormRegister } from "@/features/auth/components/auth-form-register"
 export const metadata: Metadata = {
   title: "Daftar - Roomah",
   description:
-    "Bergabunglah dengan Roomah untuk memulai perjalanan ta'aruf yang bermakna",
+    "Bergabunglah dengan Roomah untuk memulai perjalanan Ta&apos;aruf yang bermakna",
   robots: "noindex, nofollow",
 };
 
@@ -16,7 +16,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <AuthCard
           title="Selamat Datang di Roomah"
-          subtitle="Mulai perjalanan ta'aruf yang bermakna"
+          subtitle="Mulai perjalanan Ta'aruf yang bermakna"
         >
           <AuthFormRegister />
           <div className="text-center mt-6">

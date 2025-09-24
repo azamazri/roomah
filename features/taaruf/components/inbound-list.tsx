@@ -68,7 +68,7 @@ export function InboundList() {
     try {
       const result = await acceptTaaruf(itemId);
       if (result.success) {
-        toast.success("Pengajuan Ta'aruf diterima!");
+        toast.success("Pengajuan Ta&apos;aruf diterima!");
         fetchInboundItems();
       } else {
         toast.error(result.error || "Gagal menerima pengajuan");
@@ -87,7 +87,7 @@ export function InboundList() {
     try {
       const result = await rejectTaaruf(itemToReject);
       if (result.success) {
-        toast.success("Pengajuan Ta'aruf ditolak");
+        toast.success("Pengajuan Ta&apos;aruf ditolak");
         fetchInboundItems();
       } else {
         toast.error(result.error || "Gagal menolak pengajuan");
@@ -150,7 +150,7 @@ export function InboundList() {
             <Eye className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-medium mb-2">Belum Ada CV Masuk</h3>
-          <p>Belum ada yang mengajukan Ta'aruf kepada Anda</p>
+          <p>Belum ada yang mengajukan Ta&apos;aruf kepada Anda</p>
         </div>
       </Card>
     );
@@ -238,8 +238,8 @@ export function InboundList() {
           <AlertDialogHeader>
             <AlertDialogTitle>Konfirmasi Penolakan</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin akan menolak tawaran Ta'aruf ini? Tindakan ini
-              tidak dapat dibatalkan.
+              Apakah Anda yakin akan menolak tawaran Ta&apos;aruf ini? Tindakan
+              ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

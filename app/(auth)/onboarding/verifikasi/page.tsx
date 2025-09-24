@@ -4,7 +4,7 @@ import { FiveQForm } from "@/features/auth/components/fiveq-form";
 
 export const metadata: Metadata = {
   title: "Verifikasi Kesiapan - Roomah",
-  description: "Verifikasi kesiapan Anda untuk memulai ta'aruf",
+  description: "Verifikasi kesiapan Anda untuk memulai Ta&apos;aruf",
   robots: "noindex, nofollow",
 };
 

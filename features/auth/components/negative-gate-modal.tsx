@@ -85,9 +85,9 @@ export function NegativeGateModal({
           </h3>
 
           <p className="text-sm text-muted-foreground mb-6">
-            Kami melihat ada {negativeCount} jawaban "Tidak" dalam verifikasi
-            kesiapan Anda. Apakah Anda bersedia melanjutkan ke step selanjutnya
-            dengan dibimbing oleh Roomah?
+            Kami melihat ada {negativeCount} jawaban &quot;Tidak&quot; dalam
+            verifikasi kesiapan Anda. Apakah Anda bersedia melanjutkan ke step
+            selanjutnya dengan dibimbing oleh Roomah?
           </p>
         </div>
 

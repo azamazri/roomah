@@ -18,9 +18,9 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Platform Ta'aruf Islami yang membantu mempertemukan Muslim dan
-              Muslimah untuk membangun keluarga sakinah sesuai dengan syariat
-              Islam.
+              Platform Ta&apos;aruf Islami yang membantu mempertemukan Muslim
+              dan Muslimah untuk membangun keluarga sakinah sesuai dengan
+              syariat Islam.
             </p>
             <div className="text-sm text-muted-foreground">
               <p>Barakallahu lakuma wa baaraka 'alaikuma</p>

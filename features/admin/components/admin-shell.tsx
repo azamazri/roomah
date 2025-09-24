@@ -45,7 +45,7 @@ const menuItems = [
   },
   {
     href: "/admin/proses-taaruf",
-    label: "Proses Ta'aruf",
+    label: "Proses Ta&apos;aruf",
     icon: Heart,
     scopes: ["taaruf_management"],
   },

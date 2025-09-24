@@ -27,7 +27,7 @@ const STAGE_CONFIG = {
   Pengajuan: {
     icon: Heart,
     color: "default",
-    description: "Ta'aruf baru diajukan",
+    description: "Ta&apos;aruf baru diajukan",
   },
   Screening: {
     icon: Users,
@@ -120,9 +120,9 @@ export function TaarufKanbanBoard() {
         return updated;
       });
 
-      toast.success(`Ta'aruf berhasil dipindah ke ${destStage}`);
+      toast.success(`Ta&apos;aruf berhasil dipindah ke ${destStage}`);
     } catch (error) {
-      toast.error("Gagal memindah ta'aruf. Silakan coba lagi.");
+      toast.error("Gagal memindah Ta&apos;aruf. Silakan coba lagi.");
     }
   };
 
@@ -146,7 +146,7 @@ export function TaarufKanbanBoard() {
       <Card>
         <CardContent className="p-8 text-center">
           <div className="text-destructive mb-4">
-            Gagal memuat data ta'aruf. Silakan coba lagi.
+            Gagal memuat data Ta&apos;aruf. Silakan coba lagi.
           </div>
           <Button onClick={refreshData} className="gap-2">
             <RefreshCw className="h-4 w-4" />
@@ -240,7 +240,9 @@ export function TaarufKanbanBoard() {
 
                         {cards.length === 0 && !isDragging && (
                           <div className="text-center py-8 text-muted-foreground">
-                            <div className="text-sm">Belum ada ta'aruf</div>
+                            <div className="text-sm">
+                              Belum ada Ta&apos;aruf
+                            </div>
                           </div>
                         )}
                       </div>

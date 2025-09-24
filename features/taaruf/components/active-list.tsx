@@ -79,8 +79,10 @@ export function ActiveList() {
           <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <Heart className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-medium mb-2">Belum Ada Ta'aruf Aktif</h3>
-          <p>Anda belum memiliki proses Ta'aruf yang sedang berjalan</p>
+          <h3 className="text-lg font-medium mb-2">
+            Belum Ada Ta&apos;aruf Aktif
+          </h3>
+          <p>Anda belum memiliki proses Ta&apos;aruf yang sedang berjalan</p>
         </div>
       </Card>
     );
@@ -98,9 +100,9 @@ export function ActiveList() {
                   <Heart className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold">Ta'aruf Aktif</h3>
+                  <h3 className="text-lg font-semibold">Ta&apos;aruf Aktif</h3>
                   <p className="text-sm text-muted-foreground">
-                    Proses Ta'aruf sedang berlangsung
+                    Proses Ta&apos;aruf sedang berlangsung
                   </p>
                 </div>
               </div>
@@ -118,7 +120,7 @@ export function ActiveList() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Heart className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Kode Ta'aruf:</span>
+                  <span className="font-medium">Kode Ta&apos;aruf:</span>
                   <Badge variant="outline" className="font-mono">
                     {item.kodeTaaruf}
                   </Badge>
@@ -155,7 +157,7 @@ export function ActiveList() {
             {/* Info */}
             <div className="bg-muted/50 rounded-md p-3 text-sm text-muted-foreground">
               <p>
-                🎉 Selamat! Ta'aruf Anda telah dimulai. Silakan lanjutkan
+                🎉 Selamat! Ta&apos;aruf Anda telah dimulai. Silakan lanjutkan
                 komunikasi dengan kandidat melalui admin untuk proses
                 selanjutnya.
               </p>

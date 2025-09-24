@@ -145,7 +145,8 @@ export function KoinDashboard() {
                   Saldo Koin Anda
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Gunakan koin untuk mengajukan Ta'aruf (5 koin per pengajuan)
+                  Gunakan koin untuk mengajukan Ta&apos;aruf (5 koin per
+                  pengajuan)
                 </p>
               </div>
             </div>
@@ -189,7 +190,7 @@ export function KoinDashboard() {
 
                   <div className="text-sm text-muted-foreground">
                     <p>• {pkg.koin} koin</p>
-                    <p>• {Math.floor(pkg.koin / 5)} kali ajukan Ta'aruf</p>
+                    <p>• {Math.floor(pkg.koin / 5)} kali ajukan Ta&apos;aruf</p>
                   </div>
 
                   <Button
@@ -215,7 +216,7 @@ export function KoinDashboard() {
             <div className="text-sm">
               <h4 className="font-medium mb-1">Informasi Penggunaan Koin</h4>
               <ul className="space-y-1 text-muted-foreground">
-                <li>• Setiap pengajuan Ta'aruf membutuhkan 5 koin</li>
+                <li>• Setiap pengajuan Ta&apos;aruf membutuhkan 5 koin</li>
                 <li>• Koin tidak akan dikembalikan jika pengajuan ditolak</li>
                 <li>• Saldo koin tidak memiliki masa expired</li>
                 <li>• Pembayaran menggunakan sistem yang aman</li>

@@ -6,7 +6,7 @@ import { AuthFormLogin } from "@/features/auth/components/auth-form-login";
 export const metadata: Metadata = {
   title: "Masuk - Roomah",
   description:
-    "Masuk ke akun Roomah Anda untuk melanjutkan ta'aruf yang bermakna",
+    "Masuk ke akun Roomah Anda untuk melanjutkan Ta&apos;aruf yang bermakna",
   robots: "noindex, nofollow",
 };
 

@@ -250,8 +250,8 @@ export function CvReviewModal({
             <AlertDialogTitle>Konfirmasi Persetujuan</AlertDialogTitle>
             <AlertDialogDescription>
               CV akan disetujui dan pengguna akan mendapat kode kandidat. Profil
-              mereka akan tampil di halaman "Cari Jodoh". Tindakan ini tidak
-              dapat dibatalkan.
+              mereka akan tampil di halaman &quot;Cari Jodoh&quot;. Tindakan ini
+              tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

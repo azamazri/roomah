@@ -27,7 +27,7 @@ export default async function Page({ searchParams }: PageProps) {
           Temukan Pasangan Hidup Anda
         </h1>
         <p className="text-muted-foreground">
-          Platform Ta'aruf Islami untuk membangun keluarga sakinah
+          Platform Ta&apos;aruf Islami untuk membangun keluarga sakinah
         </p>
       </div>
 

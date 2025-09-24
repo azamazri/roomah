@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { TaarufTabs } from "@/features/taaruf/components/taaruf-tabs";
 
 export const metadata: Metadata = {
-  title: "Riwayat Ta'aruf - Roomah",
-  description: "Kelola proses Ta'aruf Anda",
+  title: "Riwayat Ta&apos;aruf - Roomah",
+  description: "Kelola proses Ta&apos;aruf Anda",
   robots: "noindex",
 };
 
@@ -12,10 +12,10 @@ export default function Page() {
     <div className="space-y-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">
-          Riwayat Ta'aruf
+          Riwayat Ta&apos;aruf
         </h1>
         <p className="text-muted-foreground">
-          Kelola proses Ta'aruf yang masuk, dikirim, dan sedang aktif
+          Kelola proses Ta&apos;aruf yang masuk, dikirim, dan sedang aktif
         </p>
       </div>
 

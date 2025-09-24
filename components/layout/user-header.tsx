@@ -10,7 +10,7 @@ export function UserHeader() {
   const navItems = [
     { href: "/cari-jodoh", label: "Cari Jodoh" },
     { href: "/cv-saya", label: "CV Saya" },
-    { href: "/riwayat-taaruf", label: "Riwayat Ta'aruf" },
+    { href: "/riwayat-taaruf", label: "Riwayat Ta&apos;aruf" },
     { href: "/koin-saya", label: "Koin Saya" },
   ];
 

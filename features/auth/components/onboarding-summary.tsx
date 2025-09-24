@@ -105,8 +105,8 @@ export function OnboardingSummary() {
 
       <div className="text-center">
         <p className="text-sm text-muted-foreground">
-          Setelah klik "Selesai", Anda akan diarahkan ke halaman utama dan dapat
-          mulai mencari pasangan yang tepat.
+          Setelah klik &quot;Selesai&quot;, Anda akan diarahkan ke halaman utama
+          dan dapat mulai mencari pasangan yang tepat.
         </p>
       </div>
     </div>

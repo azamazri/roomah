@@ -101,8 +101,8 @@ export async function updateTaarufStage(
   // Mock: Update taaruf stage in database
   console.log(`Updating taaruf ${taarufId} to stage ${newStage}`);
 
-  // Update user-facing ta'aruf status
-  // This would update the status shown to users in their ta'aruf dashboard
+  // Update user-facing Ta&apos;aruf status
+  // This would update the status shown to users in their Ta&apos;aruf dashboard
   await updateUserTaarufStatus(taarufId, newStage);
 
   // Revalidate related cache tags
@@ -116,7 +116,7 @@ async function updateUserTaarufStatus(
   stage: TaarufStage
 ): Promise<void> {
   // TODO: Update user-facing status based on stage
-  // This affects what users see in their ta'aruf dashboard
+  // This affects what users see in their Ta&apos;aruf dashboard
 
   const userStatusMap = {
     Pengajuan: "pending_admin_review",

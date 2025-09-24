@@ -257,7 +257,7 @@ export function CvOnboardingForm() {
             htmlFor="income"
             className="block text-sm font-medium text-card-foreground mb-2"
           >
-            Penghasilan (Saat Ta'aruf) *
+            Penghasilan (Saat Ta&apos;aruf) *
           </label>
           <select
             id="income"

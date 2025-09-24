@@ -9,10 +9,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Roomah - Platform Ta'aruf Islami Terpercaya",
+  title: "Roomah - Platform Ta&apos;aruf Islami Terpercaya",
   description:
-    "Platform Ta'aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah",
-  keywords: "ta'aruf, islami, jodoh, muslim, pernikahan, roomah",
+    "Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah",
+  keywords: "Ta&apos;aruf, islami, jodoh, muslim, pernikahan, roomah",
 };
 
 export default function RootLayout({

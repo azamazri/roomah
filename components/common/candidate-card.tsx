@@ -49,7 +49,7 @@ export function CandidateCard({
       const result = await ajukanTaaruf(candidate.id);
 
       if (result.success) {
-        toast.success("Pengajuan Ta'aruf berhasil dikirim!");
+        toast.success("Pengajuan Ta&apos;aruf berhasil dikirim!");
         router.refresh();
       } else {
         switch (result.error) {
@@ -66,7 +66,7 @@ export function CandidateCard({
             router.push("/koin-saya");
             break;
           case "ACTIVE_TAARUF_EXISTS":
-            toast.error("Anda sedang dalam proses Ta'aruf aktif.");
+            toast.error("Anda sedang dalam proses Ta&apos;aruf aktif.");
             break;
           default:
             toast.error("Terjadi kesalahan. Silakan coba lagi.");
@@ -161,7 +161,7 @@ export function CandidateCard({
                   }
                   className="flex-1 gap-1"
                 >
-                  {isSubmitting ? "Mengirim..." : "Ajukan Ta'aruf"}
+                  {isSubmitting ? "Mengirim..." : "Ajukan Ta&apos;aruf"}
                 </Button>
               )}
             </div>

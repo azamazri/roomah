@@ -9,11 +9,11 @@ import { NegativeGateModal } from "./negative-gate-modal";
 import { setOnboardingFlag } from "@/features/auth/lib/mock-session";
 
 const questions = [
-  "Apakah Anda sudah siap secara mental dan spiritual untuk menjalani ta'aruf?",
+  "Apakah Anda sudah siap secara mental dan spiritual untuk menjalani Ta&apos;aruf?",
   "Apakah Anda memiliki tujuan yang jelas untuk menikah dalam waktu dekat (1-2 tahun)?",
   "Apakah Anda memiliki kesiapan finansial untuk berkeluarga?",
   "Apakah Anda sudah mendapat restu dari keluarga untuk mencari pasangan hidup?",
-  "Apakah Anda siap berkomitmen penuh dalam proses ta'aruf yang serius?",
+  "Apakah Anda siap berkomitmen penuh dalam proses Ta&apos;aruf yang serius?",
 ];
 
 export function FiveQForm() {

@@ -1,5 +1,5 @@
 // /app/api/admin/accounts/[userId]/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { assertAdmin } from "@/lib/admin-auth";
 
 // ambil sebagian dari list + mock aktivitas
@@ -97,7 +97,7 @@ const activities: Record<string, any[]> = {
 };
 
 export async function GET(
-  _: Request,
+  request: NextRequest, // Ubah '_' menjadi 'request' dan tipe menjadi 'NextRequest'
   { params }: { params: { userId: string } }
 ) {
   try {
@@ -110,6 +110,7 @@ export async function GET(
     );
     return NextResponse.json({ ...info, activities: acts });
   } catch (e: any) {
+    // Pastikan Anda mengimpor NextResponse di atas
     return new NextResponse(e.message || "Unauthorized", {
       status: e.status || 500,
     });

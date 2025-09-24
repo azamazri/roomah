@@ -1,0 +1,61 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+export default function Header() {
+  return (
+    <header className="sticky top-0 z-50 w-full border-b border-input bg-background/80 backdrop-blur-sm">
+      <div className="container-x flex h-16 items-center justify-between">
+        {/* Brand */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold text-lg"
+        >
+          <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground text-sm font-bold rounded">
+            R
+          </div>
+          <span className="text-foreground">Roomah</span>
+        </Link>
+
+        {/* Main Navigation */}
+        <nav
+          role="navigation"
+          aria-label="Navigasi utama"
+          className="hidden md:flex items-center gap-6"
+        >
+          <Link
+            href="/"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors px-2 py-1"
+          >
+            BERANDA
+          </Link>
+          <Link
+            href="/tentang"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors px-2 py-1"
+          >
+            TENTANG
+          </Link>
+          <Link
+            href="/kontak"
+            className="text-sm font-medium text-foreground hover:text-primary transition-colors px-2 py-1"
+          >
+            KONTAK
+          </Link>
+        </nav>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm">
+            <Link href="/login" className="no-underline">
+              Masuk
+            </Link>
+          </Button>
+          <Button variant="primary" size="sm" className="rounded-full">
+            <Link href="/register" className="no-underline">
+              Daftar Gratis
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}

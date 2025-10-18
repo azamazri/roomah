@@ -20,7 +20,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "validate": "npm run type-check && npm run lint && npm run format:check && npm run test",
-    "prepare": "node -e \"try { require('husky').install() } catch (e) {if (e.code !== 'MODULE_NOT_FOUND') throw e}\""
+    "prepare": "husky || true"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

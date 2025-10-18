@@ -5,103 +5,114 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  onboardingCvSchema,
-  type OnboardingCvData,
-} from "@/features/auth/schemas/onboarding-cv";
-import { setOnboardingFlag } from "@/features/auth/lib/mock-session";
+  onboardingCvWajibSchema,
+  type OnboardingCvWajibInput,
+} from "@/features/auth/schemas/onboarding";
+import { submitOnboardingCvWajib, skipOnboardingCv } from "@/features/auth/server/actions";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
-const provinsiOptions = [
-  "Aceh",
-  "Sumatera Utara",
-  "Sumatera Barat",
-  "Riau",
-  "Kepulauan Riau",
-  "Jambi",
-  "Sumatera Selatan",
-  "Bangka Belitung",
-  "Bengkulu",
-  "Lampung",
-  "DKI Jakarta",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "DI Yogyakarta",
-  "Jawa Timur",
-  "Banten",
-  "Bali",
-  "Nusa Tenggara Barat",
-  "Nusa Tenggara Timur",
-  "Kalimantan Barat",
-  "Kalimantan Tengah",
-  "Kalimantan Selatan",
-  "Kalimantan Timur",
-  "Kalimantan Utara",
-  "Sulawesi Utara",
-  "Sulawesi Tengah",
-  "Sulawesi Selatan",
-  "Sulawesi Tenggara",
-  "Gorontalo",
-  "Sulawesi Barat",
-  "Maluku",
-  "Maluku Utara",
-  "Papua Barat",
-  "Papua",
-];
+// ⬇️ Sumber data dipusatkan di constants
+import {
+  INDONESIAN_PROVINCES,
+  EDUCATION_LEVELS,
+  MARITAL_STATUSES,
+  INCOME_RANGES,
+} from "@/lib/constants/regions";
 
-const pendidikanOptions = ["SMA/SMK", "Diploma", "S1", "S2", "S3"];
-const statusOptions = ["Single", "Janda", "Duda"];
-const penghasilanOptions = ["0-2 juta", "2-5 juta", "5-10 juta", "10+ juta"];
+// hitung umur dari YYYY-MM-DD (jika ada)
+function calcAge(birthDate?: string) {
+  if (!birthDate) return undefined;
+  const b = new Date(birthDate);
+  if (Number.isNaN(b.getTime())) return undefined;
+  const now = new Date();  const age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age >= 0 ? age : undefined;
+}
 
 export function CvOnboardingForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showDiseases, setShowDiseases] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
-  } = useForm<OnboardingCvData>({
-    resolver: zodResolver(onboardingCvSchema),
-    defaultValues: {
-      diseases: [],
-    },
+  } = useForm<OnboardingCvWajibInput>({
+    resolver: zodResolver(onboardingCvWajibSchema),
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "diseases",
-  });
-
-  async function onSubmit(data: OnboardingCvData) {
+  async function onSubmit(data: OnboardingCvWajibInput) {
     setIsLoading(true);
+    
+    try {
+      // submitOnboardingCvWajib will get user from server session
+      // Pass null as userId to let server action get it from session
+      const result = await submitOnboardingCvWajib(null, data);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setOnboardingFlag("rmh_cv", "1");
-    router.push("/onboarding/selesai");
+      if (result.success) {
+        router.refresh();
+        router.push("/onboarding/selesai");
+      } else {
+        console.error(result.error);
+        // TODO: Show toast error
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleSkip() {
     setIsLoading(true);
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    setOnboardingFlag("rmh_cv", "0");
-    router.push("/onboarding/selesai");
-  }
-
-  function addDisease() {
-    if (fields.length < 3) {
-      append({ name: "" });
+    try {
+      // skipOnboardingCv will get user from server session
+      const result = await skipOnboardingCv(null);
+      
+      if (result.success) {
+        router.refresh();
+        router.push("/onboarding/selesai");
+      } else {
+        console.error(result.error);
+      }
+    } finally {
+      setIsLoading(false);
     }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Jenis Kelamin */}
+        <div>
+          <label
+            htmlFor="gender"
+            className="block text-sm font-medium text-card-foreground mb-2"
+          >
+            Jenis Kelamin *
+          </label>
+          <select
+            id="gender"
+            {...register("gender")}
+            className="w-full"
+            disabled={isLoading}
+          >
+            <option value="">Pilih Jenis Kelamin</option>
+            <option value="IKHWAN">Ikhwan (Laki-laki)</option>
+            <option value="AKHWAT">Akhwat (Perempuan)</option>
+          </select>
+          {errors.gender && (
+            <p
+              className="text-sm text-destructive mt-1"
+              role="alert"
+              aria-live="polite"
+            >
+              {errors.gender.message}
+            </p>
+          )}
+        </div>
         {/* Tanggal Lahir */}
         <div>
           <label
@@ -128,66 +139,34 @@ export function CvOnboardingForm() {
           )}
         </div>
 
-        {/* Status Pernikahan */}
-        <div>
-          <label
-            htmlFor="maritalStatus"
-            className="block text-sm font-medium text-card-foreground mb-2"
-          >
-            Status Pernikahan *
-          </label>
-          <select
-            id="maritalStatus"
-            {...register("maritalStatus")}
-            className="w-full"
-            disabled={isLoading}
-          >
-            <option value="">Pilih Status</option>
-            {statusOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.maritalStatus && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              {errors.maritalStatus.message}
-            </p>
-          )}
-        </div>
-
         {/* Domisili Provinsi */}
         <div>
           <label
-            htmlFor="province"
+            htmlFor="provinceId"
             className="block text-sm font-medium text-card-foreground mb-2"
           >
             Domisili Provinsi *
           </label>
           <select
-            id="province"
-            {...register("province")}
+            id="provinceId"
+            {...register("provinceId", { valueAsNumber: true })}
             className="w-full"
             disabled={isLoading}
           >
             <option value="">Pilih Provinsi</option>
-            {provinsiOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {INDONESIAN_PROVINCES.map((prov, idx) => (
+              <option key={idx} value={idx + 1}>
+                {prov}
               </option>
             ))}
           </select>
-          {errors.province && (
+          {errors.provinceId && (
             <p
               className="text-sm text-destructive mt-1"
               role="alert"
               aria-live="polite"
             >
-              {errors.province.message}
+              {errors.provinceId.message}
             </p>
           )}
         </div>
@@ -207,11 +186,11 @@ export function CvOnboardingForm() {
             disabled={isLoading}
           >
             <option value="">Pilih Pendidikan</option>
-            {pendidikanOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
+            <option value="SMA_SMK">SMA/SMK</option>
+            <option value="D3">D3</option>
+            <option value="S1">S1</option>
+            <option value="S2">S2</option>
+            <option value="S3">S3</option>
           </select>
           {errors.education && (
             <p
@@ -227,184 +206,29 @@ export function CvOnboardingForm() {
         {/* Pekerjaan */}
         <div>
           <label
-            htmlFor="job"
+            htmlFor="occupation"
             className="block text-sm font-medium text-card-foreground mb-2"
           >
             Pekerjaan *
           </label>
           <input
-            id="job"
+            id="occupation"
             type="text"
-            {...register("job")}
+            {...register("occupation")}
             className="w-full"
             placeholder="Contoh: Software Engineer"
             disabled={isLoading}
           />
-          {errors.job && (
+          {errors.occupation && (
             <p
               className="text-sm text-destructive mt-1"
               role="alert"
               aria-live="polite"
             >
-              {errors.job.message}
+              {errors.occupation.message}
             </p>
           )}
         </div>
-
-        {/* Penghasilan */}
-        <div>
-          <label
-            htmlFor="income"
-            className="block text-sm font-medium text-card-foreground mb-2"
-          >
-            Penghasilan (Saat Ta&apos;aruf) *
-          </label>
-          <select
-            id="income"
-            {...register("income")}
-            className="w-full"
-            disabled={isLoading}
-          >
-            <option value="">Pilih Range</option>
-            {penghasilanOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.income && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              {errors.income.message}
-            </p>
-          )}
-        </div>
-
-        {/* Tinggi Badan */}
-        <div>
-          <label
-            htmlFor="height"
-            className="block text-sm font-medium text-card-foreground mb-2"
-          >
-            Tinggi Badan (cm) *
-          </label>
-          <input
-            id="height"
-            type="number"
-            {...register("height", { valueAsNumber: true })}
-            className="w-full"
-            placeholder="170"
-            min="120"
-            max="220"
-            disabled={isLoading}
-          />
-          {errors.height && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              {errors.height.message}
-            </p>
-          )}
-        </div>
-
-        {/* Berat Badan */}
-        <div>
-          <label
-            htmlFor="weight"
-            className="block text-sm font-medium text-card-foreground mb-2"
-          >
-            Berat Badan (kg) *
-          </label>
-          <input
-            id="weight"
-            type="number"
-            {...register("weight", { valueAsNumber: true })}
-            className="w-full"
-            placeholder="65"
-            min="30"
-            max="200"
-            disabled={isLoading}
-          />
-          {errors.weight && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
-              {errors.weight.message}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Riwayat Penyakit */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowDiseases(!showDiseases)}
-          className="flex items-center justify-between w-full p-4 bg-muted rounded-lg text-left hover:bg-muted/80"
-          disabled={isLoading}
-        >
-          <span className="font-medium text-card-foreground">
-            Riwayat Penyakit (Opsional)
-          </span>
-          <span
-            className={`transform transition-transform ${
-              showDiseases ? "rotate-180" : ""
-            }`}
-          >
-            ▼
-          </span>
-        </button>
-
-        {showDiseases && (
-          <div className="mt-4 space-y-4 p-4 border border-input rounded-lg">
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-center space-x-2">
-                <input
-                  {...register(`diseases.${index}.name` as const)}
-                  className="flex-1"
-                  placeholder="Nama penyakit"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => remove(index)}
-                  className="text-destructive hover:text-destructive/80 px-2 py-1"
-                  disabled={isLoading}
-                >
-                  Hapus
-                </button>
-              </div>
-            ))}
-
-            {fields.length < 3 && (
-              <button
-                type="button"
-                onClick={addDisease}
-                className="text-sm text-primary hover:text-primary/80"
-                disabled={isLoading}
-              >
-                + Tambah Penyakit
-              </button>
-            )}
-
-            {errors.diseases && (
-              <p
-                className="text-sm text-destructive"
-                role="alert"
-                aria-live="polite"
-              >
-                {errors.diseases.message}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Actions */}

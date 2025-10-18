@@ -1,119 +1,138 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export default function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
-  // cookies
-  const authCookie = request.cookies.get("rmh_auth")?.value; // "1" kalau logged-in (user/admin sama)
-  const fiveQCookie = request.cookies.get("rmh_5q")?.value; // "1" kalau verifikasi 5Q selesai
-  const cvCookie = request.cookies.get("rmh_cv")?.value; // "0" / "1" status onboarding CV user
-  const adminCookie = request.cookies.get("rmh_admin")?.value; // "1" kalau session admin
-
-  const isAuthenticated = authCookie === "1";
-  const isAdmin = adminCookie === "1";
-  const fiveQCompleted = fiveQCookie === "1";
-  const onboardingComplete =
-    fiveQCompleted && (cvCookie === "0" || cvCookie === "1");
-
-  // --- Helper route checks ---
-  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
-  const isAdminLogin = pathname === "/admin/login";
-  const isAuthRoute = pathname === "/login" || pathname === "/register";
-
-  // User area (bukan pakai /(app), tapi path konkrit)
-  const USER_APP_PREFIXES = [
-    "/cari-jodoh",
-    "/cv-saya",
-    "/riwayat-taaruf",
-    "/koin-saya",
-    "/onboarding",
-  ];
-  const isUserAppRoute = USER_APP_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
-
-  // --- ADMIN GUARDS ---
-  if (isAdminRoute) {
-    // izinkan halaman login admin selalu bisa diakses
-    if (isAdminLogin) {
-      // kalau sudah admin & sudah login → lempar ke dashboard (kecuali ada ?next)
-      if (isAuthenticated && isAdmin) {
-        const next = searchParams.get("next") || "/admin/dashboard";
-        const url = request.nextUrl.clone();
-        url.pathname = next;
-        url.search = "";
-        return NextResponse.redirect(url);
-      }
-      return NextResponse.next();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
     }
+  )
 
-    // selain /admin/login, semua /admin/** wajib admin
-    if (!isAuthenticated || !isAdmin) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
-    }
+  // IMPORTANT: Avoid writing any logic between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
 
-    // admin valid → lanjut
-    return NextResponse.next();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+
+  // Protected routes - require authentication and completed onboarding
+  const protectedPaths = ['/cari-jodoh', '/dashboard', '/cv-saya', '/koin-saya', '/riwayat-taaruf']
+  const isProtectedPath = protectedPaths.some((path) => pathname.startsWith(path))
+
+  // Auth routes - login and register pages
+  const authPaths = ['/login', '/register']
+  const isAuthPath = authPaths.includes(pathname)
+
+  // Onboarding route
+  const isOnboardingPath = pathname === '/onboarding'
+
+  // Auth callback route - never redirect
+  const isAuthCallback = pathname === '/auth/callback'
+
+  if (isAuthCallback) {
+    return supabaseResponse
   }
 
-  // --- USER APP GUARDS (onboarding) ---
-  if (isUserAppRoute) {
-    // semua user area wajib login user (admin pun butuh rmh_auth=1)
-    if (!isAuthenticated) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", pathname);
-      return NextResponse.redirect(url);
+  // If user is NOT logged in
+  if (!user) {
+    // Redirect protected routes to login
+    if (isProtectedPath) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('redirectTo', pathname)
+      return NextResponse.redirect(url)
     }
-
-    // onboarding flow user (hanya berlaku untuk path /onboarding atau halaman app user)
-    const isOnboardingRoute = pathname.startsWith("/onboarding");
-    if (!onboardingComplete) {
-      if (!fiveQCompleted) {
-        if (pathname !== "/onboarding/verifikasi") {
-          const url = request.nextUrl.clone();
-          url.pathname = "/onboarding/verifikasi";
-          return NextResponse.redirect(url);
-        }
-      } else if (cvCookie !== "0" && cvCookie !== "1") {
-        if (pathname !== "/onboarding/cv") {
-          const url = request.nextUrl.clone();
-          url.pathname = "/onboarding/cv";
-          return NextResponse.redirect(url);
-        }
-      }
-    } else if (isOnboardingRoute) {
-      // kalau onboarding sudah beres, jangan biarkan akses /onboarding
-      const url = request.nextUrl.clone();
-      url.pathname = "/cari-jodoh";
-      return NextResponse.redirect(url);
-    }
-
-    return NextResponse.next();
+    
+    // Allow access to auth pages and onboarding when not logged in
+    return supabaseResponse
   }
 
-  // --- AUTH ROUTES (login/register) redirect jika sudah login user ---
-  if (isAuthRoute && isAuthenticated) {
-    if (!onboardingComplete) {
-      const url = request.nextUrl.clone();
-      url.pathname = !fiveQCompleted
-        ? "/onboarding/verifikasi"
-        : "/onboarding/cv";
-      return NextResponse.redirect(url);
+  // If user IS logged in, check profile completion
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('registered_at')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const hasCompletedOnboarding = profile && profile.registered_at !== null
+
+  // If on auth pages (login/register) and logged in
+  if (isAuthPath) {
+    if (!hasCompletedOnboarding) {
+      // Incomplete profile → send to onboarding
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    } else {
+      // Complete profile → send to browse page
+      const url = request.nextUrl.clone()
+      url.pathname = '/cari-jodoh'
+      return NextResponse.redirect(url)
     }
-    const url = request.nextUrl.clone();
-    url.pathname = "/cari-jodoh";
-    return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  // If accessing protected routes but onboarding incomplete
+  if (isProtectedPath && !hasCompletedOnboarding) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/onboarding'
+    return NextResponse.redirect(url)
+  }
+
+  // If on onboarding page but already completed
+  if (isOnboardingPath && hasCompletedOnboarding) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/cari-jodoh'
+    return NextResponse.redirect(url)
+  }
+
+  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
+  // creating a new response object with NextResponse.next() make sure to:
+  // 1. Pass the request in it, like so:
+  //    const myNewResponse = NextResponse.next({ request })
+  // 2. Copy over the cookies, like so:
+  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+  // 3. Change the myNewResponse object to fit your needs, but avoid changing
+  //    the cookies!
+  // 4. Finally:
+  //    return myNewResponse
+  // If this is not done, you may be causing the browser and server to go out
+  // of sync and terminate the user's session prematurely!
+
+  return supabaseResponse
 }
 
 export const config = {
-  // Sudah cukup luas dan termasuk /admin/**
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     * - api routes
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}

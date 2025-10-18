@@ -21,14 +21,14 @@ export function Pagination({
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", page.toString());
-    router.push(`${baseUrl}?${params.toString()}`);
+    router.push(`${baseUrl}?${params.toString()}`, { scroll: false });
   };
 
   const renderPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
+  const start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  const end = Math.min(totalPages, start + maxVisible - 1);
 
     if (end - start < maxVisible - 1) {
       start = Math.max(1, end - maxVisible + 1);
@@ -105,3 +105,4 @@ export function Pagination({
     </div>
   );
 }
+

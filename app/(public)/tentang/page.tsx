@@ -16,7 +16,7 @@ export default function TentangPage() {
             Tentang Roomah
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Platform Ta&apos;aruf Islami yang menghubungkan hati yang tulus
+            Platform Ta'aruf Islami yang menghubungkan hati yang tulus
             untuk membangun rumah tangga sakinah, mawadah, dan rahmah.
           </p>
         </div>
@@ -29,7 +29,7 @@ export default function TentangPage() {
                 Visi Kami
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                Menjadi platform Ta&apos;aruf terdepan yang membantu umat Islam
+                Menjadi platform Ta'aruf terdepan yang membantu umat Islam
                 menemukan pasangan hidup yang tepat untuk membangun keluarga
                 yang berkah dan menjadi bagian dari peradaban Islam yang mulia.
               </p>
@@ -42,7 +42,7 @@ export default function TentangPage() {
               <ul className="space-y-3 text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                  Menyediakan platform Ta&apos;aruf yang aman, terpercaya, dan
+                  Menyediakan platform Ta'aruf yang aman, terpercaya, dan
                   sesuai dengan nilai-nilai Islam
                 </li>
                 <li className="flex items-start gap-3">
@@ -52,7 +52,7 @@ export default function TentangPage() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></span>
-                  Memberikan pendampingan dalam proses Ta&apos;aruf sesuai
+                  Memberikan pendampingan dalam proses Ta'aruf sesuai
                   dengan syariat Islam
                 </li>
                 <li className="flex items-start gap-3">
@@ -91,10 +91,10 @@ export default function TentangPage() {
 
                 <div className="bg-surface-1 rounded-lg p-4">
                   <h3 className="font-medium text-foreground mb-2">
-                    🤝 Pendampingan Syar&apos;i
+                    🤝 Pendampingan Syar'i
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Proses Ta&apos;aruf didampingi oleh tim yang memahami fiqh
+                    Proses Ta'aruf didampingi oleh tim yang memahami fiqh
                     munakahat dan tradisi Islam.
                   </p>
                 </div>
@@ -124,7 +124,7 @@ export default function TentangPage() {
                 Tauhid
               </h3>
               <p className="text-sm text-muted-foreground">
-                Mengutamakan ridha Allah SWT dalam setiap proses Ta&apos;aruf
+                Mengutamakan ridha Allah SWT dalam setiap proses Ta'aruf
                 dan pernikahan
               </p>
             </div>
@@ -160,7 +160,7 @@ export default function TentangPage() {
         {/* CTA Section */}
         <div className="text-center mt-16">
           <h2 className="text-2xl font-bold text-foreground mb-4">
-            Siap Memulai Perjalanan Ta&apos;aruf?
+            Siap Memulai Perjalanan Ta'aruf?
           </h2>
           <p className="text-muted-foreground mb-6">
             Bergabunglah dengan ribuan Muslim dan Muslimah yang telah

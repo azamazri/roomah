@@ -142,7 +142,7 @@ export default function PrivacyPage() {
               <ul className="space-y-2">
                 <li>• Dengan persetujuan eksplisit Anda</li>
                 <li>
-                  • Untuk memfasilitasi proses Ta&apos;aruf yang Anda setujui
+                  • Untuk memfasilitasi proses Ta'aruf yang Anda setujui
                 </li>
                 <li>
                   • Kepada penyedia layanan tepercaya yang membantu operasional

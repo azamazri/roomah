@@ -19,7 +19,7 @@ const styles = {
 };
 
 export function ToastContainer() {
-  const [toasts, setToasts] = useState<Array<{ id: string; options: any }>>([]);
+  const [toasts, setToasts] = useState<Array<{ id: string; options: { type: 'success' | 'error' | 'info' | 'warning'; message: string } }>>([]);
 
   useEffect(() => {
     const unsubscribe = toastManager.subscribe(setToasts);
@@ -53,3 +53,4 @@ export function ToastContainer() {
     </div>
   );
 }
+

@@ -1,18 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { QueryProvider } from "@/lib/providers/query-provider";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { createMetadata } from "@/lib/config/metadata";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+  preload: true,
 });
 
-export const metadata: Metadata = {
-  title: "Roomah - Platform Ta&apos;aruf Islami Terpercaya",
-  description:
-    "Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah",
-  keywords: "Ta&apos;aruf, islami, jodoh, muslim, pernikahan, roomah",
+export const metadata: Metadata = createMetadata();
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({
@@ -29,7 +39,9 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        {children}
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

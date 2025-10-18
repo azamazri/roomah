@@ -17,7 +17,7 @@ import {
   Edit,
 } from "lucide-react";
 import { CvData } from "../types";
-import { loadCvData } from "../server/actions";
+import { loadCvData } from "@/server/actions/cv-details";
 
 interface CvPreviewProps {
   onEditClick: () => void;
@@ -56,7 +56,7 @@ export function CvPreview({ onEditClick }: CvPreviewProps) {
     );
   }
 
-  // Check if CV is empty (only mandatory fields)
+  // CV dianggap kosong bila dua field dasar kosong
   const isEmpty =
     !cvData || (!cvData.biodata.namaLengkap && !cvData.biodata.tanggalLahir);
 
@@ -91,6 +91,24 @@ export function CvPreview({ onEditClick }: CvPreviewProps) {
     return map[penghasilan as keyof typeof map] || penghasilan;
   };
 
+  // Mapping status yang sesuai dengan server:
+  // - "approved"    -> default (hijau)
+  // - "revisi"      -> destructive (merah)
+  // - lainnya/draft -> secondary (abu)
+  const statusVariant =
+    cvData?.status === "approved"
+      ? "default"
+      : cvData?.status === "revisi"
+      ? "destructive"
+      : "secondary";
+
+  const statusLabel =
+    cvData?.status === "approved"
+      ? "Approved"
+      : cvData?.status === "revisi"
+      ? "Needs Revision"
+      : "Under Review";
+
   return (
     <div className="space-y-6">
       {/* Status CV */}
@@ -103,21 +121,7 @@ export function CvPreview({ onEditClick }: CvPreviewProps) {
                 Status verifikasi CV Anda
               </p>
             </div>
-            <Badge
-              variant={
-                cvData.status === "approve"
-                  ? "default"
-                  : cvData.status === "review"
-                  ? "secondary"
-                  : "destructive"
-              }
-            >
-              {cvData.status === "approve"
-                ? "Approved"
-                : cvData.status === "review"
-                ? "Under Review"
-                : "Needs Revision"}
-            </Badge>
+            <Badge variant={statusVariant}>{statusLabel}</Badge>
           </div>
 
           {cvData.kodeKandidat && (

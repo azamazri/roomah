@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Check, X, Calendar } from "lucide-react";
 import { InboundItem } from "../types";
-import {
-  getInboundTaaruf,
-  acceptTaaruf,
-  rejectTaaruf,
-} from "../server/actions";
-import { getCandidateById } from "@/features/candidates/server/list";
-import { CandidateModal } from "@/features/candidates/components/candidate-modal";
+import { CandidateModal } from "@/components/common/candidate-modal";
 import { CandidateSummary } from "@/features/candidates/types";
 import { toast } from "sonner";
 import {
@@ -40,58 +34,71 @@ export function InboundList() {
     fetchInboundItems();
   }, []);
 
-  const fetchInboundItems = async () => {
+  async function fetchInboundItems() {
     try {
-      const items = await getInboundTaaruf();
-      setInboundItems(items);
+      const res = await fetch("/api/taaruf/inbound", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal memuat inbox");
+      setInboundItems(json.items ?? []);
     } catch (error) {
       console.error("Error fetching inbound items:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleViewCV = async (candidateId: string) => {
+  async function handleViewCV(candidateId: string) {
     try {
-      const candidate = await getCandidateById(candidateId);
-      if (candidate) {
-        setSelectedCandidate(candidate);
-        setShowCandidateModal(true);
-      }
+      // TODO: ganti endpoint ini sesuai endpoint kandidat milikmu
+      const res = await fetch(`/api/candidates/${candidateId}`, {
+        cache: "no-store",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal memuat kandidat");
+      setSelectedCandidate(json as CandidateSummary);
+      setShowCandidateModal(true);
     } catch (error) {
       toast.error("Gagal memuat detail kandidat");
     }
-  };
+  }
 
-  const handleAccept = async (itemId: string) => {
+  async function handleAccept(itemId: string) {
     setProcessingId(itemId);
     try {
-      const result = await acceptTaaruf(itemId);
-      if (result.success) {
-        toast.success("Pengajuan Ta&apos;aruf diterima!");
-        fetchInboundItems();
-      } else {
-        toast.error(result.error || "Gagal menerima pengajuan");
+      const res = await fetch("/api/taaruf/inbound/accept", {
+        method: "POST",
+        body: JSON.stringify({ id: itemId }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Gagal menerima pengajuan");
       }
+      toast.success("Pengajuan Taaruf diterima!");
+      fetchInboundItems();
     } catch (error) {
       toast.error("Terjadi kesalahan");
     } finally {
       setProcessingId(null);
     }
-  };
+  }
 
-  const handleRejectConfirm = async () => {
+  async function handleRejectConfirm() {
     if (!itemToReject) return;
 
     setProcessingId(itemToReject);
     try {
-      const result = await rejectTaaruf(itemToReject);
-      if (result.success) {
-        toast.success("Pengajuan Ta&apos;aruf ditolak");
-        fetchInboundItems();
-      } else {
-        toast.error(result.error || "Gagal menolak pengajuan");
+      const res = await fetch("/api/taaruf/inbound/reject", {
+        method: "POST",
+        body: JSON.stringify({ id: itemToReject }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Gagal menolak pengajuan");
       }
+      toast.success("Pengajuan Taaruf ditolak");
+      fetchInboundItems();
     } catch (error) {
       toast.error("Terjadi kesalahan");
     } finally {
@@ -99,15 +106,15 @@ export function InboundList() {
       setShowRejectDialog(false);
       setItemToReject(null);
     }
-  };
+  }
 
-  const handleReject = (itemId: string) => {
+  function handleReject(itemId: string) {
     setItemToReject(itemId);
     setShowRejectDialog(true);
-  };
+  }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("id-ID", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString("id-ID", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -115,7 +122,6 @@ export function InboundList() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
 
   if (loading) {
     return (
@@ -150,7 +156,7 @@ export function InboundList() {
             <Eye className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-medium mb-2">Belum Ada CV Masuk</h3>
-          <p>Belum ada yang mengajukan Ta&apos;aruf kepada Anda</p>
+          <p>Belum ada yang mengajukan Taaruf kepada Anda</p>
         </div>
       </Card>
     );
@@ -238,7 +244,7 @@ export function InboundList() {
           <AlertDialogHeader>
             <AlertDialogTitle>Konfirmasi Penolakan</AlertDialogTitle>
             <AlertDialogDescription>
-              Apakah Anda yakin akan menolak tawaran Ta&apos;aruf ini? Tindakan
+              Apakah Anda yakin akan menolak tawaran Taaruf ini? Tindakan
               ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -256,3 +262,4 @@ export function InboundList() {
     </>
   );
 }
+

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getLatestTransactions } from "../server/dashboard";
+import { getLatestTransactions } from "@/features/admin/server/dashboard";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 

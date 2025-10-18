@@ -1,59 +1,24 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
 
-interface CoinRecord {
-  id: string;
-  userId: string;
-  amount: number;
-  status: string;
-  provider: string;
-  createdAt: string;
-}
-interface CoinTransactionResponse {
-  items: CoinRecord[];
-  total: number;
-  totalPages: number;
-  currentPage: number;
-}
+import useSWR from "swr";
 
-export function useCoinTransactions(
-  page: number,
-  status: string,
-  from: string,
-  to: string
-) {
-  const [data, setData] = useState<CoinTransactionResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((r) => {
+    if (!r.ok) throw new Error("Failed");
+    return r.json();
+  });
 
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const q = new URLSearchParams();
-      q.set("page", String(page));
-      if (status) q.set("status", status);
-      if (from) q.set("from", from);
-      if (to) q.set("to", to);
-      const res = await fetch(`/api/admin/coins?${q.toString()}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
-    } catch (e: any) {
-      setError(e.message || "Unknown error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, status, from, to]);
+export function useCoinTransactions(page = 1, status = "", from = "", to = "") {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  if (status) params.set("status", status);
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
 
-  const mutate = useCallback(async () => {
-    await fetchData();
-  }, [fetchData]);
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/admin/coin-topups?${params.toString()}`,
+    fetcher
+  );
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return { data, isLoading, error, mutate };
+  return { data, error, isLoading, mutate };
 }

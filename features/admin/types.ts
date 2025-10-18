@@ -1,11 +1,9 @@
-export type UserRole = "admin" | "finance" | "moderator";
-
 export type CvStatus = "approve" | "review" | "revisi";
 
 export type AdminUser = {
   id: string;
   email: string;
-  role: UserRole;
+  isAdmin: boolean;
   scopes: string[];
 };
 
@@ -95,9 +93,9 @@ export type PostingItem = {
 export type PlatformSettings = {
   coinPriceIdrPerUnit: number;
   taarufMinCoins: number;
-  roles: Array<{
+  admins: Array<{
     email: string;
-    role: UserRole;
+    isAdmin: boolean;
     scopes: string[];
   }>;
 };

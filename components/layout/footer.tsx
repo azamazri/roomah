@@ -18,12 +18,12 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Platform Ta&apos;aruf Islami yang membantu mempertemukan Muslim
+              Platform Taaruf Islami yang membantu mempertemukan Muslim
               dan Muslimah untuk membangun keluarga sakinah sesuai dengan
               syariat Islam.
             </p>
             <div className="text-sm text-muted-foreground">
-              <p>Barakallahu lakuma wa baaraka &apos;alaikuma</p>
+              <p>Barakallahu lakuma wa baaraka 'alaikuma</p>
             </div>
           </div>
 
@@ -96,3 +96,4 @@ export default function Footer() {
     </footer>
   );
 }
+

@@ -58,7 +58,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             className: cn(classes, child.props.className),
             ref,
             ...props,
-          } as any);
+          });
         }
         return child;
       });
@@ -98,3 +98,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 export { Button };
+

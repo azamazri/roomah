@@ -16,7 +16,7 @@ export function TaarufTabs() {
     { id: "outbound" as TabType, label: "CV Dikirim", component: OutboundList },
     {
       id: "active" as TabType,
-      label: "Ta&apos;aruf Aktif",
+      label: "Taaruf Aktif",
       component: ActiveList,
     },
   ];
@@ -52,3 +52,4 @@ export function TaarufTabs() {
     </div>
   );
 }
+

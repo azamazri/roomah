@@ -20,7 +20,7 @@ export function UserBottomNav() {
     },
     {
       href: "/riwayat-taaruf",
-      label: "Ta&apos;aruf",
+      label: "Taaruf",
       icon: Heart,
     },
     {
@@ -56,3 +56,4 @@ export function UserBottomNav() {
     </nav>
   );
 }
+

@@ -44,18 +44,19 @@ export default function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            <Link href="/login" className="no-underline">
+          <Link href="/login">
+            <Button variant="ghost" size="sm">
               Masuk
-            </Link>
-          </Button>
-          <Button variant="primary" size="sm" className="rounded-full">
-            <Link href="/register" className="no-underline">
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button variant="primary" size="sm" className="rounded-full">
               Daftar Gratis
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
   );
 }
+

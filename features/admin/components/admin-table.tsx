@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface TableColumn<T = any> {
+interface TableColumn<T = Record<string, unknown>> {
   key: string;
   label: string;
   render?: (item: T) => React.ReactNode;
   className?: string;
 }
 
-interface AdminTableProps<T = any> {
+interface AdminTableProps<T = Record<string, unknown>> {
   columns: TableColumn<T>[];
   data: T[];
   isLoading?: boolean;
@@ -20,7 +20,7 @@ interface AdminTableProps<T = any> {
   className?: string;
 }
 
-export function AdminTable<T extends Record<string, any>>({
+export function AdminTable<T extends Record<string, unknown>>({
   columns,
   data,
   isLoading = false,

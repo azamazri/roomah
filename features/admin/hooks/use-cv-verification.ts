@@ -1,50 +1,22 @@
 "use client";
-import { useState, useEffect } from "react";
 
-interface CvQueueItem {
-  userId: string;
-  nama: string;
-  gender: "M" | "F";
-  submittedAt: string;
-  status: string;
-}
-interface CvListResponse {
-  items: CvQueueItem[];
-  total: number;
-  totalPages: number;
-  currentPage: number;
-}
+import useSWR from "swr";
 
-export function useCvVerification(page: number, query: string) {
-  const [data, setData] = useState<CvListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const fetcher = (url: string) =>
+  fetch(url, { credentials: "include" }).then((r) => {
+    if (!r.ok) throw new Error("Failed");
+    return r.json();
+  });
 
-  useEffect(() => {
-    let abort = false;
-    (async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const q = new URLSearchParams();
-        q.set("page", String(page));
-        if (query) q.set("q", query);
-        const res = await fetch(`/api/admin/cv-queue?${q.toString()}`, {
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!abort) setData(json);
-      } catch (e: any) {
-        if (!abort) setError(e.message || "Unknown error");
-      } finally {
-        if (!abort) setIsLoading(false);
-      }
-    })();
-    return () => {
-      abort = true;
-    };
-  }, [page, query]);
+export function useCvVerification(page = 1, q = "") {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  if (q) params.set("q", q);
 
-  return { data, isLoading, error };
+  const { data, error, isLoading } = useSWR(
+    `/api/admin/cv-queue?${params.toString()}`,
+    fetcher
+  );
+
+  return { data, error, isLoading };
 }

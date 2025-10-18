@@ -7,63 +7,102 @@ import { Button } from "@/components/ui/button";
 type FilterBarProps = {
   hideGender?: boolean;
   forceOppositeOfGender?: "M" | "F";
+  provinces?: { id: number; name: string }[];
 };
 
 interface Filters {
   gender: string;
-  ageMin: string;
-  ageMax: string;
+  ageRange: string;
   education: string;
   province: string;
 }
 
 const educationOptions = [
   { value: "", label: "Semua Pendidikan" },
-  { value: "SMA", label: "SMA/SMK" },
+  { value: "SMA_SMK", label: "SMA/SMK" },
   { value: "D3", label: "D3" },
   { value: "S1", label: "S1" },
   { value: "S2", label: "S2" },
   { value: "S3", label: "S3" },
 ];
 
-const provinceOptions = [
-  { value: "", label: "Semua Provinsi" },
-  { value: "DKI Jakarta", label: "DKI Jakarta" },
-  { value: "Jawa Barat", label: "Jawa Barat" },
-  { value: "Jawa Tengah", label: "Jawa Tengah" },
-  { value: "Jawa Timur", label: "Jawa Timur" },
-  { value: "DI Yogyakarta", label: "DI Yogyakarta" },
-  { value: "Banten", label: "Banten" },
-  { value: "Sumatra Utara", label: "Sumatra Utara" },
+// Age ranges: 17-22, 23-28, 29-34, 35-40, 41-46, 47+
+const ageRangeOptions = [
+  { value: "", label: "Semua Umur" },
+  { value: "17-22", label: "17 - 22 tahun" },
+  { value: "23-28", label: "23 - 28 tahun" },
+  { value: "29-34", label: "29 - 34 tahun" },
+  { value: "35-40", label: "35 - 40 tahun" },
+  { value: "41-46", label: "41 - 46 tahun" },
+  { value: "47+", label: "47+ tahun" },
 ];
 
 const genderOptions = [
   { value: "", label: "Semua Gender" },
-  { value: "M", label: "Laki-laki" },
-  { value: "F", label: "Perempuan" },
+  { value: "IKHWAN", label: "Ikhwan" },
+  { value: "AKHWAT", label: "Akhwat" },
 ];
 
 export default function FilterBar({
   hideGender,
   forceOppositeOfGender,
+  provinces = [],
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [provinceOptions, setProvinceOptions] = useState<
+    { id: number; name: string }[]
+  >(provinces ?? []);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+
   const [filters, setFilters] = useState<Filters>({
     gender: searchParams.get("gender") || "",
-    ageMin: searchParams.get("ageMin") || "",
-    ageMax: searchParams.get("ageMax") || "",
+    ageRange: searchParams.get("ageRange") || "",
     education: searchParams.get("education") || "",
     province: searchParams.get("province") || "",
   });
 
   useEffect(() => {
+    setProvinceOptions(provinces ?? []);
+  }, [provinces]);
+
+  useEffect(() => {
+    if (provinces && provinces.length > 0) {
+      return;
+    }
+  const isMounted = true;
+    setLoadingProvinces(true);
+
+    fetch("/api/provinces")
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load provinces");
+        const payload = await res.json();
+        if (isMounted) {
+          setProvinceOptions(payload?.provinces ?? []);
+        }
+      })
+      .catch((error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[FilterBar] Failed to load provinces:", error);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingProvinces(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [provinces]);
+
+  useEffect(() => {
     setFilters({
       gender: searchParams.get("gender") || "",
-      ageMin: searchParams.get("ageMin") || "",
-      ageMax: searchParams.get("ageMax") || "",
+      ageRange: searchParams.get("ageRange") || "",
       education: searchParams.get("education") || "",
       province: searchParams.get("province") || "",
     });
@@ -86,9 +125,9 @@ export default function FilterBar({
       }
     });
 
-    // Gender handling
+    // Gender handling - convert M/F to IKHWAN/AKHWAT for database compatibility
     if (forceOppositeOfGender) {
-      const forced = forceOppositeOfGender === "M" ? "F" : "M";
+      const forced = forceOppositeOfGender === "M" ? "AKHWAT" : "IKHWAN";
       params.set("gender", forced);
     } else if (filters.gender) {
       params.set("gender", filters.gender);
@@ -97,25 +136,24 @@ export default function FilterBar({
     }
 
     params.set("page", "1");
-    router.push(`${pathname}?${params.toString()}`, { scroll: true });
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const reset = () => {
     setFilters({
       gender: "",
-      ageMin: "",
-      ageMax: "",
+      ageRange: "",
       education: "",
       province: "",
     });
 
     const params = new URLSearchParams();
     if (forceOppositeOfGender) {
-      const forced = forceOppositeOfGender === "M" ? "F" : "M";
+      const forced = forceOppositeOfGender === "M" ? "AKHWAT" : "IKHWAN";
       params.set("gender", forced);
     }
     params.set("page", "1");
-    router.push(`${pathname}?${params.toString()}`, { scroll: true });
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   return (
@@ -142,38 +180,18 @@ export default function FilterBar({
         )}
 
         <div>
-          <label htmlFor="ageMin" className="block text-sm font-medium mb-2">
-            Umur Min
+          <label htmlFor="ageRange" className="block text-sm font-medium mb-2">
+            Umur
           </label>
           <select
-            id="ageMin"
-            value={filters.ageMin}
-            onChange={(e) => handleFilterChange("ageMin", e.target.value)}
+            id="ageRange"
+            value={filters.ageRange}
+            onChange={(e) => handleFilterChange("ageRange", e.target.value)}
             className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">Min</option>
-            {Array.from({ length: 19 }, (_, i) => 17 + i).map((age) => (
-              <option key={age} value={age.toString()}>
-                {age}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="ageMax" className="block text-sm font-medium mb-2">
-            Umur Max
-          </label>
-          <select
-            id="ageMax"
-            value={filters.ageMax}
-            onChange={(e) => handleFilterChange("ageMax", e.target.value)}
-            className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Max</option>
-            {Array.from({ length: 19 }, (_, i) => 17 + i).map((age) => (
-              <option key={age} value={age.toString()}>
-                {age}
+            {ageRangeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -206,10 +224,12 @@ export default function FilterBar({
             value={filters.province}
             onChange={(e) => handleFilterChange("province", e.target.value)}
             className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={loadingProvinces && provinceOptions.length === 0}
           >
-            {provinceOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
+            <option value="">Semua Provinsi</option>
+            {provinceOptions.map((prov) => (
+              <option key={prov.id} value={prov.id.toString()}>
+                {prov.name}
               </option>
             ))}
           </select>
@@ -225,3 +245,4 @@ export default function FilterBar({
     </div>
   );
 }
+

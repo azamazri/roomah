@@ -1,152 +1,342 @@
-import { revalidateTag } from "next/cache";
-import type { CvQueueItem, CvReviewAction } from "../types";
-import { PAGINATION_SIZE } from "../constants";
+"use server";
 
-interface CvListResponse {
-  items: CvQueueItem[];
-  total: number;
-  totalPages: number;
-  currentPage: number;
-}
+import { createServiceClient } from "@/lib/supabase/server";
+import { AppError, ERROR_CODES, handleDatabaseError, validateInput } from "@/lib/api/error";
+import { z } from "zod";
+import { verifyAdminAccess, checkAdminPermission } from "./auth";
 
-export async function listPendingCv(
-  page: number = 1,
-  query: string = ""
-): Promise<CvListResponse> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
+/**
+ * Validation schemas
+ */
+const approveCvSchema = z.object({
+  userId: z.string(),
+  notes: z.string().max(500).optional(),
+});
 
-  // Mock data - replace with actual database queries
-  const mockData: CvQueueItem[] = [
-    {
-      userId: "user-001",
-      nama: "Ahmad Rahman",
-      gender: "M",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      status: "review",
-    },
-    {
-      userId: "user-002",
-      nama: "Siti Aisyah",
-      gender: "F",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      status: "review",
-    },
-    {
-      userId: "user-003",
-      nama: "Muhammad Faisal",
-      gender: "M",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-      status: "review",
-    },
-    {
-      userId: "user-004",
-      nama: "Fatimah Azzahra",
-      gender: "F",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-      status: "review",
-    },
-    {
-      userId: "user-005",
-      nama: "Abdullah Ibrahim",
-      gender: "M",
-      submittedAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-      status: "review",
-    },
-  ];
+const rejectCvSchema = z.object({
+  userId: z.string(),
+  reason: z.string().min(10, "Alasan penolakan minimal 10 karakter").max(500),
+});
 
-  // Filter by query
-  const filtered = query
-    ? mockData.filter((item) =>
-        item.nama.toLowerCase().includes(query.toLowerCase())
+const listPendingCvSchema = z.object({
+  limit: z.number().int().positive().max(100).default(20),
+  offset: z.number().int().nonnegative().default(0),
+  sortBy: z.enum(["recent", "oldest"]).default("recent"),
+});
+
+/**
+ * List pending CV verifications
+ */
+export async function listPendingCvVerifications(adminId: string, input: unknown) {
+  try {
+    await verifyAdminAccess(adminId);
+    const data = validateInput(listPendingCvSchema, input, "listPendingCvVerifications");
+    const supabase = createServiceClient();
+
+    let query = supabase
+      .from("onboarding_verifications")
+      .select(
+        `*,
+        profiles:profile_id (id, first_name, last_name, email, phone)`,
+        { count: "exact" }
       )
-    : mockData;
+      .eq("step", "cv_data")
+      .eq("status", "pending");
 
-  // Pagination
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / PAGINATION_SIZE);
-  const start = (page - 1) * PAGINATION_SIZE;
-  const items = filtered.slice(start, start + PAGINATION_SIZE);
+    const order = data.sortBy === "recent" ? false : true;
+    query = query.order("created_at", { ascending: order });
 
-  return {
-    items,
-    total,
-    totalPages,
-    currentPage: page,
-  };
-}
+    const { data: verifications, error, count } = await query.range(
+      data.offset,
+      data.offset + data.limit - 1
+    );
 
-export async function getCvDetail(userId: string) {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+    if (error) {
+      throw handleDatabaseError(error, "listPendingCvVerifications");
+    }
 
-  // Mock data - replace with actual database query
-  const mockDetails = {
-    "user-001": {
-      namaLengkap: "Ahmad Rahman bin Abdullah",
-      gender: "M" as const,
-      tanggalLahir: "1995-03-15",
-      asalDaerah: "Jakarta Selatan, DKI Jakarta",
-      pendidikan: "S1 Teknik Informatika, Universitas Indonesia",
-      pekerjaan: "Software Engineer di PT. Tech Indonesia",
-      deskripsiDiri:
-        "Seorang muslim yang konsisten menjalankan ibadah. Memiliki visi untuk membangun keluarga sakinah mawaddah warahmah. Hobi membaca Al-Quran dan mengikuti kajian agama. Menyukai teknologi dan programming.",
-    },
-    "user-002": {
-      namaLengkap: "Siti Aisyah binti Ahmad",
-      gender: "F" as const,
-      tanggalLahir: "1997-08-22",
-      asalDaerah: "Bandung, Jawa Barat",
-      pendidikan: "S1 Psikologi, Universitas Padjadjaran",
-      pekerjaan: "HR Manager di PT. Berkah Sejahtera",
-      deskripsiDiri:
-        "Muslimah yang menjalankan syariat Islam dengan istiqomah. Bercita-cita menjadi istri dan ibu yang sholehah. Aktif dalam kegiatan dakwah dan sosial. Menyukai memasak dan membaca buku-buku islami.",
-    },
-  };
+    const verificationList = (verifications || []).map((v: any) => ({
+      id: v.id,
+      userId: v.profile_id,
+      userName: `${v.profiles?.first_name} ${v.profiles?.last_name}`,
+      email: v.profiles?.email,
+      phone: v.profiles?.phone,
+      step: v.step,
+      status: v.status,
+      data: v.data,
+      createdAt: v.created_at,
+      updatedAt: v.updated_at,
+    }));
 
-  const detail = mockDetails[userId as keyof typeof mockDetails];
-  if (!detail) {
-    throw new Error("CV detail not found");
+    return {
+      success: true,
+      data: {
+        verifications: verificationList,
+        pagination: {
+          total: count || 0,
+          limit: data.limit,
+          offset: data.offset,
+          hasMore: (data.offset + data.limit) < (count || 0),
+        },
+      },
+    };
+  } catch (error) {
+    console.error("List pending CV verifications error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Terjadi kesalahan saat mengambil daftar verifikasi CV",
+      500
+    );
   }
-
-  return detail;
 }
 
-export async function approveCv(userId: string): Promise<void> {
-  // TODO: Implement actual database update
+/**
+ * Get detailed CV verification data
+ */
+export async function getCvVerificationDetail(adminId: string, userId: string) {
+  try {
+    await verifyAdminAccess(adminId);
+    const supabase = createServiceClient();
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
+    // Get onboarding verification record
+    const { data: verification, error: verifyError } = await supabase
+      .from("onboarding_verifications")
+      .select("*")
+      .eq("profile_id", userId)
+      .eq("step", "cv_data")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
 
-  // Generate candidate code
-  const candidateCode = generateCandidateCode();
+    if (verifyError) {
+      throw new AppError(
+        ERROR_CODES.PROFILE_NOT_FOUND,
+        "Data verifikasi CV tidak ditemukan",
+        404
+      );
+    }
 
-  // Mock: Update CV status to 'approve' and assign candidate code
-  console.log(`Approving CV for user ${userId} with code ${candidateCode}`);
+    // Get user profile
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
 
-  // Revalidate related cache tags
-  revalidateTag("cv-verification");
-  revalidateTag("dashboard-kpi");
-  revalidateTag(`user-${userId}-cv`);
+    // Get CV items
+    const { data: cvItems } = await supabase
+      .from("cv_data")
+      .select("*")
+      .eq("profile_id", userId)
+      .order("display_order", { ascending: true });
+
+    return {
+      success: true,
+      data: {
+        verification: {
+          id: verification.id,
+          step: verification.step,
+          status: verification.status,
+          data: verification.data,
+          createdAt: verification.created_at,
+          updatedAt: verification.updated_at,
+        },
+        profile: {
+          id: profile?.id,
+          name: `${profile?.first_name} ${profile?.last_name}`,
+          email: profile?.email,
+          phone: profile?.phone,
+          gender: profile?.gender,
+          birthDate: profile?.birth_date,
+          city: profile?.city,
+        },
+        cvItems: (cvItems || []).map((item) => ({
+          id: item.id,
+          category: item.category,
+          title: item.title,
+          description: item.description,
+          data: item.data,
+          displayOrder: item.display_order,
+          isVisible: item.is_visible,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error("Get CV verification detail error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Terjadi kesalahan saat mengambil detail verifikasi CV",
+      500
+    );
+  }
 }
 
-export async function reviseCv(userId: string, note: string): Promise<void> {
-  // TODO: Implement actual database update
+/**
+ * Approve CV verification
+ */
+export async function approveCvVerification(adminId: string, input: unknown) {
+  try {
+    await verifyAdminAccess(adminId);
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
+    const permission = await checkAdminPermission(adminId, "verify_cv");
+    if (!permission.allowed) {
+      throw new AppError(
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+        permission.reason || "Tidak memiliki izin",
+        403
+      );
+    }
 
-  // Mock: Update CV status to 'revisi' and save note
-  console.log(`Revising CV for user ${userId} with note: ${note}`);
+    const data = validateInput(approveCvSchema, input, "approveCvVerification");
+    const supabase = createServiceClient();
 
-  // Revalidate related cache tags
-  revalidateTag("cv-verification");
-  revalidateTag(`user-${userId}-cv`);
+    // Update verification status
+    const { error: updateError } = await supabase
+      .from("onboarding_verifications")
+      .update({
+        status: "verified",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("profile_id", data.userId)
+      .eq("step", "cv_data");
+
+    if (updateError) {
+      throw handleDatabaseError(updateError, "approveCvVerification");
+    }
+
+    // Log action
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_id: adminId,
+        action: "cv_approved",
+        entity_type: "onboarding_verifications",
+        entity_id: data.userId,
+        changes: {
+          status: "verified",
+          notes: data.notes,
+        },
+      });
+    } catch (auditError) {
+      console.error("Failed to log audit trail:", auditError);
+    }
+
+    return {
+      success: true,
+      message: "CV berhasil diverifikasi",
+    };
+  } catch (error) {
+    console.error("Approve CV verification error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Terjadi kesalahan saat memverifikasi CV",
+      500
+    );
+  }
 }
 
-function generateCandidateCode(): string {
-  // Generate format: RM001, RF001, etc.
-  const prefix = Math.random() > 0.5 ? "RM" : "RF"; // M for Male, F for Female
-  const number = Math.floor(Math.random() * 999) + 1;
-  return `${prefix}${number.toString().padStart(3, "0")}`;
+/**
+ * Reject CV verification
+ */
+export async function rejectCvVerification(adminId: string, input: unknown) {
+  try {
+    await verifyAdminAccess(adminId);
+
+    const permission = await checkAdminPermission(adminId, "reject_cv");
+    if (!permission.allowed) {
+      throw new AppError(
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS,
+        permission.reason || "Tidak memiliki izin",
+        403
+      );
+    }
+
+    const data = validateInput(rejectCvSchema, input, "rejectCvVerification");
+    const supabase = createServiceClient();
+
+    // Update verification status
+    const { error: updateError } = await supabase
+      .from("onboarding_verifications")
+      .update({
+        status: "rejected",
+        data: { rejection_reason: data.reason },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("profile_id", data.userId)
+      .eq("step", "cv_data");
+
+    if (updateError) {
+      throw handleDatabaseError(updateError, "rejectCvVerification");
+    }
+
+    // Log action
+    try {
+      await supabase.from("audit_logs").insert({
+        actor_id: adminId,
+        action: "cv_rejected",
+        entity_type: "onboarding_verifications",
+        entity_id: data.userId,
+        changes: {
+          status: "rejected",
+          reason: data.reason,
+        },
+      });
+    } catch (auditError) {
+      console.error("Failed to log audit trail:", auditError);
+    }
+
+    return {
+      success: true,
+      message: "CV ditolak dengan alasan yang telah disimpan",
+    };
+  } catch (error) {
+    console.error("Reject CV verification error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Terjadi kesalahan saat menolak CV",
+      500
+    );
+  }
+}
+
+/**
+ * Get CV verification statistics
+ */
+export async function getCvVerificationStats(adminId: string) {
+  try {
+    await verifyAdminAccess(adminId);
+    const supabase = createServiceClient();
+
+    const { data: stats, error } = await supabase
+      .rpc("get_cv_verification_stats");
+
+    if (error) {
+      console.error("Error fetching CV stats:", error);
+      return {
+        success: true,
+        data: {
+          pending: 0,
+          verified: 0,
+          rejected: 0,
+          total: 0,
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: stats || {},
+    };
+  } catch (error) {
+    console.error("Get CV verification stats error:", error);
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      ERROR_CODES.INTERNAL_ERROR,
+      "Terjadi kesalahan saat mengambil statistik verifikasi CV",
+      500
+    );
+  }
 }

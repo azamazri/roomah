@@ -1,17 +1,21 @@
+// app/admin/manajemen-akun/page.tsx
 import { Suspense } from "react";
 import { AccountManagementList } from "@/features/admin/components/account-management-list";
 import { TableSkeleton } from "@/features/admin/components/table-skeleton";
 
 interface PageProps {
-  searchParams: {
-    page?: string;
-    q?: string;
-  };
+  // Next.js 15: searchParams adalah Promise
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function ManajemenAkunPage({ searchParams }: PageProps) {
-  const currentPage = parseInt(searchParams.page || "1");
-  const query = searchParams.q || "";
+export default async function ManajemenAkunPage({ searchParams }: PageProps) {
+  const sp = await searchParams; // ← penting
+
+  const pageParam = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const qParam = Array.isArray(sp.q) ? sp.q[0] : sp.q;
+
+  const currentPage = Number(pageParam ?? "1") || 1;
+  const query = qParam ?? "";
 
   return (
     <div className="space-y-6">

@@ -22,7 +22,7 @@ export function toTitleCase(text: string): string {
  * @param data - The CV data to normalize
  * @returns Normalized CV data
  */
-export function normalizeCvData(data: any): any {
+export function normalizeCvData(data: unknown): unknown {
   const normalized = { ...data };
 
   // Normalize biodata text fields

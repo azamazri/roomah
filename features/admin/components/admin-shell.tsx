@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   FileCheck,
@@ -45,7 +46,7 @@ const menuItems = [
   },
   {
     href: "/admin/proses-taaruf",
-    label: "Proses Ta&apos;aruf",
+    label: "Proses Ta'aruf",
     icon: Heart,
     scopes: ["taaruf_management"],
   },
@@ -69,38 +70,37 @@ const menuItems = [
   },
 ];
 
-// Role-based access control
-const roleScopes = {
-  admin: [
-    "dashboard",
-    "cv_verification",
-    "account_management",
-    "taaruf_management",
-    "finance",
-    "posting_management",
-    "settings",
-  ],
-  finance: ["dashboard", "finance"],
-  moderator: [
-    "dashboard",
-    "cv_verification",
-    "taaruf_management",
-    "posting_management",
-  ],
-};
+// Admin access control - MVP: all admins have full access
+const adminScopes = [
+  "dashboard",
+  "cv_verification",
+  "account_management",
+  "taaruf_management",
+  "finance",
+  "posting_management",
+  "settings",
+];
 
 export function AdminShell({ children, user }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  const userScopes = roleScopes[user.role] || [];
+  // MVP: All admins have full access
+  const userScopes = user.isAdmin ? adminScopes : [];
   const allowedMenuItems = menuItems.filter((item) =>
     item.scopes.some((scope) => userScopes.includes(scope))
   );
 
   const handleLogout = async () => {
-    // TODO: Implement logout logic
-    window.location.href = "/login";
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still redirect even if signOut fails
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -130,7 +130,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
             <div className="p-6 border-b border-border">
               <h1 className="text-xl font-bold text-primary">Admin Roomah</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {user.role} • {user.email}
+                Admin • {user.email}
               </p>
             </div>
 

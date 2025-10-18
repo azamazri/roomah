@@ -1,3 +1,4 @@
+// features/admin/components/account-detail-modal.tsx
 "use client";
 
 import {
@@ -18,7 +19,8 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
-import { useAccountDetail } from "../hooks/use-account-detail";
+// ❌ HAPUS: import { useAccountDetail } from "../hooks/use-account-detail";
+import useSWR from "swr";
 import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -27,11 +29,31 @@ interface AccountDetailModalProps {
   onClose: () => void;
 }
 
+// Hook lokal pengganti useAccountDetail (tanpa bikin file baru)
+function useAccountDetailLocal(userId: string | null) {
+  const fetcher = async (url: string) => {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to fetch account detail");
+    return res.json();
+  };
+
+  const { data, error, isLoading, mutate } = useSWR(
+    userId ? `/api/admin/accounts/${userId}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: true,
+    }
+  );
+
+  return { data, error, isLoading, mutate };
+}
+
 export function AccountDetailModal({
   userId,
   onClose,
 }: AccountDetailModalProps) {
-  const { data: account, isLoading } = useAccountDetail(userId);
+  const { data: account, isLoading } = useAccountDetailLocal(userId);
 
   if (!userId) return null;
 
@@ -61,10 +83,10 @@ export function AccountDetailModal({
     }
   };
 
-  const getActivityLabel = (activity: any) => {
+  const getActivityLabel = (activity: unknown) => {
     switch (activity.type) {
       case "taaruf_ajukan":
-        return `Mengajukan Ta&apos;aruf${
+        return `Mengajukan Ta'aruf${
           activity.targetKode ? ` ke ${activity.targetKode}` : ""
         }`;
       case "coin_topup":
@@ -186,14 +208,14 @@ export function AccountDetailModal({
               <CardTitle className="text-lg">Timeline Aktivitas</CardTitle>
             </CardHeader>
             <CardContent>
-              {account.activities.length === 0 ? (
+              {(account.activities?.length ?? 0) === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <div className="text-sm">Belum ada aktivitas</div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {account.activities.map((activity, index) => (
+                  {account.activities.map((activity: unknown, index: number) => (
                     <div
                       key={index}
                       className="flex items-start gap-3 p-3 rounded-lg bg-muted/30"

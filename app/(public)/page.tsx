@@ -1,15 +1,21 @@
+// app/(public)/page.tsx
 import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import FilterBar from "@/components/common/filter-bar";
 import CandidateTeaser from "@/components/common/candidate-teaser";
+import { getProvincesList } from "@/server/actions/provinces";
+import { createMetadata } from "@/lib/config/metadata";
 
-export const metadata: Metadata = {
-  title: "Roomah - Platform Ta&apos;aruf Islami",
+// Revalidate every hour
+export const revalidate = 3600;
+
+export const metadata: Metadata = createMetadata({
+  title: "Platform Taaruf Islami Terpercaya",
   description:
-    "Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan shaleh/shalehah untuk membangun keluarga sakinah sesuai syariat Islam.",
-};
+    "Temukan pasangan shaleh/shalehah untuk membangun keluarga sakinah. Platform Taaruf Islami dengan profil terverifikasi sesuai syariat.",
+});
 
 interface HomePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -18,6 +24,17 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const sp = await searchParams;
   const page = Number(sp?.page ?? "1") || 1;
+  
+  // Fetch provinces for filter
+  const provinces = await getProvincesList();
+  
+  // Extract filter params
+  const filters = {
+    gender: (sp.gender as string) ?? "",
+    ageRange: (sp.ageRange as string) ?? "",
+    education: (sp.education as string) ?? "",
+    province: (sp.province as string) ?? "",
+  };
 
   return (
     <>
@@ -30,13 +47,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Membangun Peradaban
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Platform Ta&apos;aruf Islami yang membantu Anda menemukan pasangan
+            Platform Ta'aruf Islami yang membantu Anda menemukan pasangan
             shaleh/shalehah untuk membangun keluarga sakinah.
           </p>
-          <Button size="lg" className="rounded-full">
-            <Link href="/cari-jodoh" className="no-underline">
+          <Button size="lg" className="rounded-full" asChild>
+            <a href="#search-section" className="no-underline">
               Mulai Pencarian
-            </Link>
+            </a>
           </Button>
         </div>
       </section>
@@ -70,8 +87,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       {/* Search Section */}
-      <section className="py-16 bg-[hsl(var(--surface-2))]">
-        <div className="container-x">
+      <section id="search-section" className="py-16 bg-[hsl(var(--surface-2))]">
+        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">
               Temukan Pasangan Hidup Anda
@@ -83,10 +100,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
 
           <div className="mb-12">
-            <FilterBar />
+            <FilterBar provinces={provinces} />
           </div>
 
-          <CandidateTeaser page={page} pageSize={6} />
+          <CandidateTeaser
+            page={page}
+            pageSize={6}
+            filters={filters}
+          />
         </div>
       </section>
 
@@ -98,7 +119,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Mengapa Memilih Roomah?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Platform Ta&apos;aruf terpercaya dengan pendekatan Islami yang
+              Platform Ta'aruf terpercaya dengan pendekatan Islami yang
               sesuai syariat
             </p>
           </div>
@@ -107,10 +128,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <div className="text-center">
               <div className="text-4xl mb-4">🤝</div>
               <h3 className="text-xl font-semibold text-foreground mb-3">
-                Ta&apos;aruf Sesuai Syariat
+                Ta'aruf Sesuai Syariat
               </h3>
               <p className="text-muted-foreground">
-                Proses Ta&apos;aruf yang sesuai dengan ajaran Islam dan
+                Proses Ta'aruf yang sesuai dengan ajaran Islam dan
                 melibatkan keluarga dalam setiap tahapannya.
               </p>
             </div>

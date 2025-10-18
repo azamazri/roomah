@@ -1,17 +1,22 @@
+// app/admin/verifikasi-cv/page.tsx
 import { Suspense } from "react";
 import { CvVerificationList } from "@/features/admin/components/cv-verification-list";
 import { TableSkeleton } from "@/features/admin/components/table-skeleton";
 
 interface PageProps {
-  searchParams: {
-    page?: string;
-    q?: string;
-  };
+  // Next.js 15: searchParams harus berupa Promise
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function VerifikasiCvPage({ searchParams }: PageProps) {
-  const currentPage = parseInt(searchParams.page || "1");
-  const query = searchParams.q || "";
+export default async function VerifikasiCvPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+
+  // Handle array vs string agar aman
+  const pageParam = Array.isArray(sp.page) ? sp.page[0] : sp.page;
+  const qParam = Array.isArray(sp.q) ? sp.q[0] : sp.q;
+
+  const currentPage = Number(pageParam ?? "1") || 1;
+  const query = qParam ?? "";
 
   return (
     <div className="space-y-6">

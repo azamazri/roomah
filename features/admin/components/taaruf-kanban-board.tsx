@@ -27,7 +27,7 @@ const STAGE_CONFIG = {
   Pengajuan: {
     icon: Heart,
     color: "default",
-    description: "Ta&apos;aruf baru diajukan",
+    description: "Ta'aruf baru diajukan",
   },
   Screening: {
     icon: Users,
@@ -64,7 +64,7 @@ export function TaarufKanbanBoard() {
     setIsDragging(true);
   };
 
-  const onDragEnd = async (result: any) => {
+  const onDragEnd = async (result: unknown) => {
     setIsDragging(false);
 
     const { destination, source, draggableId } = result;
@@ -120,9 +120,9 @@ export function TaarufKanbanBoard() {
         return updated;
       });
 
-      toast.success(`Ta&apos;aruf berhasil dipindah ke ${destStage}`);
+      toast.success(`Ta'aruf berhasil dipindah ke ${destStage}`);
     } catch (error) {
-      toast.error("Gagal memindah Ta&apos;aruf. Silakan coba lagi.");
+      toast.error("Gagal memindah Ta'aruf. Silakan coba lagi.");
     }
   };
 
@@ -146,7 +146,7 @@ export function TaarufKanbanBoard() {
       <Card>
         <CardContent className="p-8 text-center">
           <div className="text-destructive mb-4">
-            Gagal memuat data Ta&apos;aruf. Silakan coba lagi.
+            Gagal memuat data Ta'aruf. Silakan coba lagi.
           </div>
           <Button onClick={refreshData} className="gap-2">
             <RefreshCw className="h-4 w-4" />
@@ -198,7 +198,7 @@ export function TaarufKanbanBoard() {
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Icon className="h-4 w-4" />
                     <span>{stage}</span>
-                    <Badge variant={config.color as any} className="ml-auto">
+                    <Badge variant={config.color} className="ml-auto">
                       {cards.length}
                     </Badge>
                   </CardTitle>
@@ -241,7 +241,7 @@ export function TaarufKanbanBoard() {
                         {cards.length === 0 && !isDragging && (
                           <div className="text-center py-8 text-muted-foreground">
                             <div className="text-sm">
-                              Belum ada Ta&apos;aruf
+                              Belum ada Ta'aruf
                             </div>
                           </div>
                         )}
@@ -263,7 +263,7 @@ interface TaarufCardProps {
   isDragging: boolean;
 }
 
-const TaarufCard = React.forwardRef<HTMLDivElement, TaarufCardProps & any>(
+const TaarufCard = React.forwardRef<HTMLDivElement, TaarufCardProps & Record<string, unknown>>(
   ({ card, isDragging, ...props }, ref) => {
     return (
       <div

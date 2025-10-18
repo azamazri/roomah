@@ -2,27 +2,62 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getOnboardingFlag } from "@/features/auth/lib/mock-session";
+import {
+  completeOnboarding,
+  getOnboardingStatus,
+} from "@/features/auth/server/actions";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 export function OnboardingSummary() {
-  const [flags, setFlags] = useState({ fiveQ: "", cv: "" });
+  const [flags, setFlags] = useState<{
+    fiveQ: "1" | "0" | "";
+    cv: "1" | "0" | "";
+  }>({
+    fiveQ: "",
+    cv: "",
+  });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Get current onboarding status
-    const fiveQ = getOnboardingFlag("rmh_5q");
-    const cv = getOnboardingFlag("rmh_cv");
-    setFlags({ fiveQ, cv });
+    let mounted = true;
+    (async () => {
+      try {
+        const s = await getOnboardingStatus();
+        // Map boolean → "1" / "0"
+        const fiveQ = s.fiveQ ? "1" : "0";
+        // CV dianggap "1" kalau minimal field sudah ada (province/education/age)
+        const cv = s.cvMinimal ? "1" : "0";
+        if (mounted) setFlags({ fiveQ, cv });
+      } catch (e) {
+        console.error(e);
+        if (mounted) setFlags({ fiveQ: "", cv: "" });
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function handleComplete() {
     setIsLoading(true);
-
-    // Simulate final processing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    router.push("/cari-jodoh");
+    try {
+      // completeOnboarding will get user from server session
+      const result = await completeOnboarding(null);
+      
+      if (result.success) {
+        router.refresh();
+        router.push("/cari-jodoh");
+      } else {
+        console.error(result.error);
+        // TODO: Show toast error
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -83,11 +118,11 @@ export function OnboardingSummary() {
 
       {/* Recommendations */}
       {flags.cv === "0" && (
-        <div className="p-4 bg-info/10 border border-info/20 rounded-lg">
-          <h4 className="font-medium text-info-foreground mb-2">
+        <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+          <h4 className="font-medium text-warning-foreground mb-2">
             💡 Rekomendasi
           </h4>
-          <p className="text-sm text-info-foreground">
+          <p className="text-sm text-warning-foreground">
             Untuk meningkatkan peluang mendapatkan pasangan yang sesuai,
             lengkapi biodata diri Anda di halaman CV Saya setelah menyelesaikan
             pendaftaran.

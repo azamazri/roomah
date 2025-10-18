@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, CheckCircle, XCircle } from "lucide-react";
 import { OutboundItem } from "../types";
-import { getOutboundTaaruf } from "../server/actions";
 
 export function OutboundList() {
   const [outboundItems, setOutboundItems] = useState<OutboundItem[]>([]);
@@ -13,17 +12,25 @@ export function OutboundList() {
 
   useEffect(() => {
     fetchOutboundItems();
-
-    // Set up periodic refresh to handle auto-deletion of rejected items
-    const interval = setInterval(fetchOutboundItems, 60000); // Check every minute
-
+    const interval = setInterval(fetchOutboundItems, 60000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchOutboundItems = async () => {
     try {
-      const items = await getOutboundTaaruf();
-      setOutboundItems(items);
+      const res = await fetch("/api/taaruf/outbound", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const text = await res.text();
+      let json: unknown = {};
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error("Server mengembalikan response non-JSON");
+      }
+      if (!res.ok) throw new Error(json.error || "Gagal memuat outbound");
+      setOutboundItems(json.items ?? []);
     } catch (error) {
       console.error("Error fetching outbound items:", error);
     } finally {
@@ -31,8 +38,8 @@ export function OutboundList() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("id-ID", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString("id-ID", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -40,7 +47,6 @@ export function OutboundList() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -77,16 +83,10 @@ export function OutboundList() {
 
   const getRemainingTime = (autoDeleteAt?: string) => {
     if (!autoDeleteAt) return null;
-
-    const now = new Date();
-    const deleteTime = new Date(autoDeleteAt);
-    const diff = deleteTime.getTime() - now.getTime();
-
+    const diff = new Date(autoDeleteAt).getTime() - Date.now();
     if (diff <= 0) return "Akan dihapus";
-
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
     return `${hours}j ${minutes}m lagi akan dihapus`;
   };
 
@@ -119,7 +119,7 @@ export function OutboundList() {
             <Calendar className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-medium mb-2">Belum Ada CV Dikirim</h3>
-          <p>Anda belum mengajukan Ta&apos;aruf kepada siapapun</p>
+          <p>Anda belum mengajukan Taaruf kepada siapapun</p>
         </div>
       </Card>
     );
@@ -167,3 +167,4 @@ export function OutboundList() {
     </Card>
   );
 }
+

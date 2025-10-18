@@ -16,7 +16,7 @@ import {
   User,
 } from "lucide-react";
 import { CvData } from "../types";
-import { loadCvData, saveCvData } from "../server/actions";
+import { loadCvData, saveCvData, uploadAvatar } from "@/server/actions/cv-details";
 import { toast } from "sonner";
 
 interface FormSection {
@@ -27,6 +27,8 @@ interface FormSection {
 
 const initialSections: FormSection[] = [
   { id: "biodata", title: "Biodata Lengkap", isOpen: true },
+  { id: "kondisiFisik", title: "Kondisi Fisik", isOpen: false },
+  { id: "latarBelakang", title: "Latar Belakang Keluarga", isOpen: false },
   { id: "ibadah", title: "Kondisi Ibadah", isOpen: false },
   { id: "kriteria", title: "Kriteria Pasangan", isOpen: false },
   { id: "rencana", title: "Rencana Pernikahan", isOpen: false },
@@ -37,6 +39,8 @@ export function CvForm() {
   const [cvData, setCvData] = useState<CvData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [riwayatPenyakit, setRiwayatPenyakit] = useState<string[]>([""]);
   const [kriteriaKhusus, setKriteriaKhusus] = useState<string[]>([""]);
 
@@ -108,6 +112,57 @@ export function CvForm() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (max 1MB)
+    if (file.size > 1024 * 1024) {
+      toast.error("Ukuran file maksimal 1MB");
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Format file harus JPG, PNG, atau WebP");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+
+    try {
+      // Show preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to server
+      const formData = new FormData();
+      formData.append("avatar", file);
+      
+      const result = await uploadAvatar(formData);
+
+      if (result.success) {
+        toast.success("Avatar berhasil diupload!");
+        // Refresh CV data
+        const updatedData = await loadCvData();
+        setCvData(updatedData);
+      } else {
+        toast.error(result.error || "Gagal upload avatar");
+        setAvatarPreview(null);
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast.error("Terjadi kesalahan saat upload avatar");
+      setAvatarPreview(null);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -125,7 +180,9 @@ export function CvForm() {
         JSON.stringify(kriteriaKhusus.filter((item) => item.trim()))
       );
 
+      console.log("Submitting CV data...");
       const result = await saveCvData(formData);
+      console.log("Save result:", result);
 
       if (result.success) {
         toast.success(
@@ -161,6 +218,28 @@ export function CvForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* CV Status Badge */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium">Status CV</h3>
+            <p className="text-sm text-muted-foreground">
+              Status verifikasi CV Anda saat ini
+            </p>
+          </div>
+          <Badge 
+            variant={
+              cvData?.status === "APPROVED" ? "default" :
+              cvData?.status === "PENDING" ? "secondary" :
+              cvData?.status === "REVISI" ? "destructive" :
+              "outline"
+            }
+          >
+            {cvData?.status || "DRAFT"}
+          </Badge>
+        </div>
+      </Card>
+
       {/* Admin Note */}
       {cvData?.adminNote && cvData.status === "revisi" && (
         <Card className="p-4 border-destructive bg-destructive/5">
@@ -192,24 +271,52 @@ export function CvForm() {
           )}
         </div>
 
-        {sections.find((s) => s.id === "biodata")?.isOpen && (
-          <div className="p-4 border-t border-input space-y-4">
-            {/* Avatar */}
-            <div className="flex justify-center mb-6">
-              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center">
-                {cvData?.biodata.avatar ? (
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "biodata")?.isOpen ? 'block' : 'none' }}
+        >
+          {/* Avatar with Upload */}
+          <div className="flex flex-col items-center gap-4 mb-6">
+            <div className="relative">
+              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center overflow-hidden">
+                {(avatarPreview || cvData?.biodata.avatar) ? (
                   <img
-                    src={cvData.biodata.avatar}
+                    src={avatarPreview || cvData?.biodata.avatar}
                     alt="Avatar"
-                    className="w-full h-full object-cover rounded-full"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <User className="h-12 w-12 text-muted-foreground" />
                 )}
               </div>
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin h-6 w-6 border-2 border-white border-t-transparent rounded-full"></div>
+                </div>
+              )}
             </div>
+            <div className="text-center">
+              <label htmlFor="avatarUpload" className="cursor-pointer">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 transition">
+                  <User className="h-4 w-4" />
+                  Upload Avatar
+                </div>
+                <input
+                  id="avatarUpload"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleAvatarUpload}
+                  disabled={isUploadingAvatar}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground mt-2">
+                Maks 1MB • JPG, PNG, WebP
+              </p>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="namaLengkap"
@@ -256,9 +363,9 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Status</option>
-                  <option value="Single">Single</option>
-                  <option value="Janda">Janda</option>
-                  <option value="Duda">Duda</option>
+                  <option value="SINGLE">Single</option>
+                  <option value="JANDA">Janda</option>
+                  <option value="DUDA">Duda</option>
                 </select>
               </div>
 
@@ -320,7 +427,7 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Pendidikan</option>
-                  <option value="SMA/SMK">SMA/SMK</option>
+                  <option value="SMA_SMK">SMA/SMK</option>
                   <option value="D3">D3</option>
                   <option value="S1">S1</option>
                   <option value="S2">S2</option>
@@ -359,14 +466,36 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Penghasilan</option>
-                  <option value="0-2">0-2 Juta</option>
-                  <option value="2-5">2-5 Juta</option>
-                  <option value="5-10">5-10 Juta</option>
-                  <option value="10+">10+ Juta</option>
-                  <option value="Saat Taaruf">Saat Taaruf</option>
+                  <option value="0_2">0-2 Juta</option>
+                  <option value="2_5">2-5 Juta</option>
+                  <option value="5_10">5-10 Juta</option>
+                  <option value="10_PLUS">10+ Juta</option>
+                  <option value="SAAT_TAARUF">Saat Taaruf</option>
                 </select>
               </div>
+          </div>
+        </div>
+      </Card>
 
+      {/* Kondisi Fisik */}
+      <Card className="overflow-hidden">
+        <div
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
+          onClick={() => toggleSection("kondisiFisik")}
+        >
+          <h2 className="text-lg font-semibold">Kondisi Fisik</h2>
+          {sections.find((s) => s.id === "kondisiFisik")?.isOpen ? (
+            <ChevronUp className="h-5 w-5" />
+          ) : (
+            <ChevronDown className="h-5 w-5" />
+          )}
+        </div>
+
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "kondisiFisik")?.isOpen ? 'block' : 'none' }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="tinggiBadan"
@@ -404,13 +533,148 @@ export function CvForm() {
                   required
                 />
               </div>
+          </div>
 
+          <div>
+            <label
+              htmlFor="ciriFisik"
+              className="block text-sm font-medium mb-2"
+            >
+              Ciri Fisik (max 200 karakter)
+            </label>
+            <Textarea
+              id="ciriFisik"
+              name="ciriFisik"
+              placeholder="Berkulit sawo matang, bermata coklat..."
+              defaultValue={cvData?.biodata.ciriFisik || ""}
+              maxLength={200}
+              rows={3}
+            />
+          </div>
+
+          {/* Riwayat Penyakit Accordion */}
+          <div className="border border-input rounded-md">
+            <div
+              className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50"
+              onClick={() => {
+                const elem = document.getElementById("riwayat-content");
+                if (elem) {
+                  elem.classList.toggle("hidden");
+                }
+              }}
+            >
+              <span className="font-medium">Riwayat Penyakit</span>
+              <ChevronDown className="h-4 w-4" />
+            </div>
+
+            <div
+              id="riwayat-content"
+              className="p-3 border-t border-input space-y-3"
+            >
+              {riwayatPenyakit.map((penyakit, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={penyakit}
+                    onChange={(e) =>
+                      updateRepeaterItem("riwayat", index, e.target.value)
+                    }
+                    placeholder={`Riwayat penyakit ${index + 1}`}
+                    className="flex-1"
+                  />
+                  {riwayatPenyakit.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeRepeaterItem("riwayat", index)}
+                      className="px-3"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+
+              {riwayatPenyakit.length < 3 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addRepeaterItem("riwayat")}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Baris
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Latar Belakang Keluarga */}
+      <Card className="overflow-hidden">
+        <div
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50"
+          onClick={() => toggleSection("latarBelakang")}
+        >
+          <h2 className="text-lg font-semibold">Latar Belakang Keluarga</h2>
+          {sections.find((s) => s.id === "latarBelakang")?.isOpen ? (
+            <ChevronUp className="h-5 w-5" />
+          ) : (
+            <ChevronDown className="h-5 w-5" />
+          )}
+        </div>
+
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "latarBelakang")?.isOpen ? 'block' : 'none' }}
+        >
+          <div>
+            <label
+              htmlFor="keberadaanOrangTua"
+              className="block text-sm font-medium mb-2"
+            >
+              Keberadaan Orang Tua *
+            </label>
+            <select
+              id="keberadaanOrangTua"
+              name="keberadaanOrangTua"
+              defaultValue={cvData?.biodata.keberadaanOrangTua || ""}
+              className="w-full"
+              required
+            >
+              <option value="">Pilih Status</option>
+              <option value="Masih Hidup Keduanya">Masih Hidup Keduanya</option>
+              <option value="Yatim">Yatim</option>
+              <option value="Piatu">Piatu</option>
+              <option value="Yatim Piatu">Yatim Piatu</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="pekerjaanOrangTua"
+              className="block text-sm font-medium mb-2"
+            >
+              Pekerjaan Orang Tua (salah satu) *
+            </label>
+            <Input
+              id="pekerjaanOrangTua"
+              name="pekerjaanOrangTua"
+              placeholder="Guru"
+              defaultValue={cvData?.biodata.pekerjaanOrangTua || ""}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="anakKe"
                   className="block text-sm font-medium mb-2"
                 >
-                  Anak Ke-
+                  Anak Ke- *
                 </label>
                 <Input
                   id="anakKe"
@@ -420,6 +684,7 @@ export function CvForm() {
                   max="99"
                   placeholder="2"
                   defaultValue={cvData?.biodata.anakKe || ""}
+                  required
                 />
               </div>
 
@@ -428,112 +693,21 @@ export function CvForm() {
                   htmlFor="saudaraKandung"
                   className="block text-sm font-medium mb-2"
                 >
-                  Jumlah Saudara Kandung
+                  Dari ... Saudara *
                 </label>
                 <Input
                   id="saudaraKandung"
                   name="saudaraKandung"
                   type="number"
-                  min="0"
+                  min="1"
                   max="99"
                   placeholder="3"
                   defaultValue={cvData?.biodata.saudaraKandung || ""}
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="pekerjaanOrangTua"
-                  className="block text-sm font-medium mb-2"
-                >
-                  Pekerjaan Orang Tua *
-                </label>
-                <Input
-                  id="pekerjaanOrangTua"
-                  name="pekerjaanOrangTua"
-                  placeholder="Guru dan Petani"
-                  defaultValue={cvData?.biodata.pekerjaanOrangTua || ""}
                   required
                 />
               </div>
-            </div>
-
-            <div>
-              <label
-                htmlFor="ciriFisik"
-                className="block text-sm font-medium mb-2"
-              >
-                Ciri Fisik (max 200 karakter)
-              </label>
-              <Textarea
-                id="ciriFisik"
-                name="ciriFisik"
-                placeholder="Berkulit sawo matang, bermata coklat..."
-                defaultValue={cvData?.biodata.ciriFisik || ""}
-                maxLength={200}
-                rows={3}
-              />
-            </div>
-
-            {/* Riwayat Penyakit Accordion */}
-            <div className="border border-input rounded-md">
-              <div
-                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50"
-                onClick={() => {
-                  const elem = document.getElementById("riwayat-content");
-                  if (elem) {
-                    elem.classList.toggle("hidden");
-                  }
-                }}
-              >
-                <span className="font-medium">Riwayat Penyakit</span>
-                <ChevronDown className="h-4 w-4" />
-              </div>
-
-              <div
-                id="riwayat-content"
-                className="p-3 border-t border-input space-y-3"
-              >
-                {riwayatPenyakit.map((penyakit, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={penyakit}
-                      onChange={(e) =>
-                        updateRepeaterItem("riwayat", index, e.target.value)
-                      }
-                      placeholder={`Riwayat penyakit ${index + 1}`}
-                      className="flex-1"
-                    />
-                    {riwayatPenyakit.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeRepeaterItem("riwayat", index)}
-                        className="px-3"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-
-                {riwayatPenyakit.length < 3 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addRepeaterItem("riwayat")}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Baris
-                  </Button>
-                )}
-              </div>
-            </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* Kondisi Ibadah */}
@@ -550,9 +724,11 @@ export function CvForm() {
           )}
         </div>
 
-        {sections.find((s) => s.id === "ibadah")?.isOpen && (
-          <div className="p-4 border-t border-input space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "ibadah")?.isOpen ? 'block' : 'none' }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="shalatFardu"
@@ -652,9 +828,8 @@ export function CvForm() {
                   defaultValue={cvData?.kondisiIbadah.kajian || ""}
                 />
               </div>
-            </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* Kriteria Pasangan */}
@@ -671,9 +846,11 @@ export function CvForm() {
           )}
         </div>
 
-        {sections.find((s) => s.id === "kriteria")?.isOpen && (
-          <div className="p-4 border-t border-input space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "kriteria")?.isOpen ? 'block' : 'none' }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="kriteriaUsia"
@@ -707,7 +884,7 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Pendidikan</option>
-                  <option value="SMA/SMK">SMA/SMK</option>
+                  <option value="SMA_SMK">SMA/SMK</option>
                   <option value="D3">D3</option>
                   <option value="S1">S1</option>
                   <option value="S2">S2</option>
@@ -730,96 +907,95 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Penghasilan</option>
-                  <option value="0-2">0-2 Juta</option>
-                  <option value="2-5">2-5 Juta</option>
-                  <option value="5-10">5-10 Juta</option>
-                  <option value="10+">10+ Juta</option>
-                  <option value="Saat Taaruf">Saat Taaruf</option>
+                  <option value="0_2">0-2 Juta</option>
+                  <option value="2_5">2-5 Juta</option>
+                  <option value="5_10">5-10 Juta</option>
+                  <option value="10_PLUS">10+ Juta</option>
+                  <option value="SAAT_TAARUF">Saat Taaruf</option>
                 </select>
               </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="kriteriaCiriFisik"
+              className="block text-sm font-medium mb-2"
+            >
+              Ciri Fisik (max 200 karakter)
+            </label>
+            <Textarea
+              id="kriteriaCiriFisik"
+              name="kriteriaCiriFisik"
+              placeholder="Sederhana dan sopan..."
+              defaultValue={cvData?.kriteriaPasangan.ciriFisik || ""}
+              maxLength={200}
+              rows={3}
+            />
+          </div>
+
+          {/* Kriteria Khusus Accordion */}
+          <div className="border border-input rounded-md">
+            <div
+              className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50"
+              onClick={() => {
+                const elem = document.getElementById("kriteria-content");
+                if (elem) {
+                  elem.classList.toggle("hidden");
+                }
+              }}
+            >
+              <span className="font-medium">Kriteria Khusus</span>
+              <ChevronDown className="h-4 w-4" />
             </div>
 
-            <div>
-              <label
-                htmlFor="kriteriaCiriFisik"
-                className="block text-sm font-medium mb-2"
-              >
-                Ciri Fisik (max 200 karakter)
-              </label>
-              <Textarea
-                id="kriteriaCiriFisik"
-                name="kriteriaCiriFisik"
-                placeholder="Sederhana dan sopan..."
-                defaultValue={cvData?.kriteriaPasangan.ciriFisik || ""}
-                maxLength={200}
-                rows={3}
-              />
-            </div>
+            <div
+              id="kriteria-content"
+              className="p-3 border-t border-input space-y-3"
+            >
+              <p className="text-sm text-muted-foreground mb-3">
+                Jika tidak diisi, default akan menjadi &quot;Tidak Ada Kriteria
+                Khusus&quot;
+              </p>
 
-            {/* Kriteria Khusus Accordion */}
-            <div className="border border-input rounded-md">
-              <div
-                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50"
-                onClick={() => {
-                  const elem = document.getElementById("kriteria-content");
-                  if (elem) {
-                    elem.classList.toggle("hidden");
-                  }
-                }}
-              >
-                <span className="font-medium">Kriteria Khusus</span>
-                <ChevronDown className="h-4 w-4" />
-              </div>
+              {kriteriaKhusus.map((kriteria, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={kriteria}
+                    onChange={(e) =>
+                      updateRepeaterItem("kriteria", index, e.target.value)
+                    }
+                    placeholder={`Kriteria khusus ${index + 1}`}
+                    className="flex-1"
+                  />
+                  {kriteriaKhusus.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeRepeaterItem("kriteria", index)}
+                      className="px-3"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
 
-              <div
-                id="kriteria-content"
-                className="p-3 border-t border-input space-y-3"
-              >
-                <p className="text-sm text-muted-foreground mb-3">
-                  Jika tidak diisi, default akan menjadi "Tidak Ada Kriteria
-                  Khusus"
-                </p>
-
-                {kriteriaKhusus.map((kriteria, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={kriteria}
-                      onChange={(e) =>
-                        updateRepeaterItem("kriteria", index, e.target.value)
-                      }
-                      placeholder={`Kriteria khusus ${index + 1}`}
-                      className="flex-1"
-                    />
-                    {kriteriaKhusus.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeRepeaterItem("kriteria", index)}
-                        className="px-3"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-
-                {kriteriaKhusus.length < 3 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addRepeaterItem("kriteria")}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Baris
-                  </Button>
-                )}
-              </div>
+              {kriteriaKhusus.length < 3 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addRepeaterItem("kriteria")}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Baris
+                </Button>
+              )}
             </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* Rencana Pernikahan */}
@@ -836,9 +1012,11 @@ export function CvForm() {
           )}
         </div>
 
-        {sections.find((s) => s.id === "rencana")?.isOpen && (
-          <div className="p-4 border-t border-input space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div 
+          className="p-4 border-t border-input space-y-4"
+          style={{ display: sections.find((s) => s.id === "rencana")?.isOpen ? 'block' : 'none' }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="tahunNikah"
@@ -872,39 +1050,38 @@ export function CvForm() {
                   required
                 />
               </div>
-            </div>
-
-            <div>
-              <label htmlFor="visi" className="block text-sm font-medium mb-2">
-                Visi (max 200 karakter) *
-              </label>
-              <Textarea
-                id="visi"
-                name="visi"
-                placeholder="Membangun keluarga sakinah..."
-                defaultValue={cvData?.rencanaPernikahan.visi || ""}
-                maxLength={200}
-                rows={3}
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="misi" className="block text-sm font-medium mb-2">
-                Misi (max 200 karakter) *
-              </label>
-              <Textarea
-                id="misi"
-                name="misi"
-                placeholder="Mendidik anak-anak menjadi generasi Qur'ani..."
-                defaultValue={cvData?.rencanaPernikahan.misi || ""}
-                maxLength={200}
-                rows={3}
-                required
-              />
-            </div>
           </div>
-        )}
+
+          <div>
+            <label htmlFor="visi" className="block text-sm font-medium mb-2">
+              Visi (max 200 karakter) *
+            </label>
+            <Textarea
+              id="visi"
+              name="visi"
+              placeholder="Membangun keluarga sakinah..."
+              defaultValue={cvData?.rencanaPernikahan.visi || ""}
+              maxLength={200}
+              rows={3}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="misi" className="block text-sm font-medium mb-2">
+              Misi (max 200 karakter) *
+            </label>
+            <Textarea
+              id="misi"
+              name="misi"
+              placeholder="Mendidik anak-anak menjadi generasi Qur'ani..."
+              defaultValue={cvData?.rencanaPernikahan.misi || ""}
+              maxLength={200}
+              rows={3}
+              required
+            />
+          </div>
+        </div>
       </Card>
 
       {/* Submit Button */}

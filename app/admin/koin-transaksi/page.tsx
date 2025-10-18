@@ -2,28 +2,29 @@ import { Suspense } from "react";
 import { CoinTransactionList } from "@/features/admin/components/coin-transaction-list";
 import { TableSkeleton } from "@/features/admin/components/table-skeleton";
 
-interface PageProps {
-  searchParams: {
+type PageProps = {
+  searchParams: Promise<{
     page?: string;
     status?: string;
     from?: string;
     to?: string;
-  };
-}
+  }>;
+};
 
-export default function KoinTransaksiPage({ searchParams }: PageProps) {
-  const currentPage = parseInt(searchParams.page || "1");
-  const status = searchParams.status || "";
-  const from = searchParams.from || "";
-  const to = searchParams.to || "";
+export default async function KoinTransaksiPage({ searchParams }: PageProps) {
+  const sp = await searchParams; // ⬅️ penting!
+
+  const currentPage = parseInt((sp.page ?? "1") as string, 10);
+  const status = (sp.status ?? "") as string;
+  const from = (sp.from ?? "") as string;
+  const to = (sp.to ?? "") as string;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Koin & Transaksi</h1>
         <p className="text-muted-foreground">
-          Rekap semua transaksi top up koin melalui Midtrans dengan monitoring
-          realtime
+          Monitor dan kelola transaksi top up koin pengguna
         </p>
       </div>
 

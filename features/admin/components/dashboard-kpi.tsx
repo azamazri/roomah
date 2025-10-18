@@ -8,7 +8,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { StatCard } from "./stat-card";
-import { getKpiData } from "../server/dashboard";
+import { getKpiData } from "@/features/admin/server/dashboard";
 
 export async function DashboardKpi() {
   const kpi = await getKpiData();
@@ -38,7 +38,7 @@ export async function DashboardKpi() {
       />
 
       <StatCard
-        title="Ta'aruf Aktif"
+        title="Taaruf Aktif"
         value={kpi.activeTaaruf}
         icon={Heart}
         description="Sedang berjalan"

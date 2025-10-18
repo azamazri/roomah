@@ -2,12 +2,19 @@ import { Metadata } from "next";
 import { UserHeader } from "@/components/layout/user-header";
 import { UserBottomNav } from "@/components/layout/user-bottom-nav";
 import { ToastContainer } from "@/components/ui/toast-container";
+import { enforceOnboarding } from "@/server/guards";
 
 export const metadata: Metadata = {
   robots: "noindex",
 };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await enforceOnboarding();
+
   return (
     <>
       <a
@@ -28,3 +35,4 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </>
   );
 }
+

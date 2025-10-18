@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Script from "next/script";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Coins, CreditCard, Zap } from "lucide-react";
-import { getSaldoKoin, topUpKoin } from "../server/actions";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,6 +14,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+
+declare global {
+  interface Window {
+    snap?: {
+      pay: (
+        token: string,
+        opts?: {
+          onSuccess?: (result?: unknown) => void;
+          onPending?: (result?: unknown) => void;
+          onError?: (result?: unknown) => void;
+          onClose?: () => void;
+        }
+      ) => void;
+    };
+  }
+}
 
 interface TopUpPackage {
   id: string;
@@ -54,14 +70,20 @@ export function KoinDashboard() {
   );
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Ambil saldo saat mount
   useEffect(() => {
     fetchSaldoKoin();
   }, []);
 
   const fetchSaldoKoin = async () => {
     try {
-      const saldo = await getSaldoKoin();
-      setSaldoKoin(saldo);
+      const res = await fetch("/api/koin/saldo", {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal memuat saldo");
+      setSaldoKoin(json.balance ?? 0);
     } catch (error) {
       console.error("Error fetching saldo koin:", error);
     } finally {
@@ -74,64 +96,106 @@ export function KoinDashboard() {
     setShowPaymentModal(true);
   };
 
+  // Confirm → request Snap token → buka popup Snap → webhook update saldo → refresh saldo
   const handlePaymentConfirm = async () => {
     if (!selectedPackage) return;
-
     setIsProcessing(true);
     try {
-      // Simulate Midtrans sandbox payment flow
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const res = await fetch("/api/koin/create-transaction", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ packageId: selectedPackage.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Gagal membuat transaksi");
 
-      const result = await topUpKoin(selectedPackage.koin);
-      if (result.success) {
-        toast.success(`Top-up ${selectedPackage.koin} koin berhasil!`);
-        fetchSaldoKoin();
-        setShowPaymentModal(false);
-        setSelectedPackage(null);
-      } else {
-        toast.error("Top-up gagal. Silakan coba lagi.");
-      }
+      if (!window.snap) throw new Error("Midtrans Snap belum siap");
+      const orderId = json.orderId as string;
+
+      window.snap.pay(json.token, {
+        onSuccess: async () => {
+          // konfirmasi ke server → credit saldo
+          const cRes = await fetch("/api/koin/confirm", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({ orderId }),
+          });
+          const cJson = await cRes.json();
+          if (!cRes.ok) throw new Error(cJson.error || "Konfirmasi gagal");
+
+          toast.success("Pembayaran berhasil! Saldo diperbarui.");
+          await fetchSaldoKoin();
+          setShowPaymentModal(false);
+          setSelectedPackage(null);
+        },
+        onPending: () =>
+          toast.message("Transaksi pending. Selesaikan pembayaran Anda."),
+        onError: () => toast.error("Pembayaran gagal. Silakan coba lagi."),
+        onClose: () => {},
+      });
     } catch (error) {
-      toast.error("Terjadi kesalahan. Silakan coba lagi.");
+      toast.error(
+        (error as Error).message || "Terjadi kesalahan. Silakan coba lagi."
+      );
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
-  };
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Card className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="h-12 bg-muted rounded w-1/2"></div>
+      <>
+        {/* Snap loader tetap dipasang agar siap ketika user selesai loading */}
+        <Script
+          src="https://app.sandbox.midtrans.com/snap/snap.js"
+          data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+          strategy="afterInteractive"
+        />
+        <div className="space-y-6">
+          <Card className="p-6">
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-muted rounded w-1/3"></div>
+              <div className="h-12 bg-muted rounded w-1/2"></div>
+            </div>
+          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-6 bg-muted rounded"></div>
+                  <div className="h-8 bg-muted rounded"></div>
+                  <div className="h-10 bg-muted rounded"></div>
+                </div>
+              </Card>
+            ))}
           </div>
-        </Card>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="p-6">
-              <div className="animate-pulse space-y-4">
-                <div className="h-6 bg-muted rounded"></div>
-                <div className="h-8 bg-muted rounded"></div>
-                <div className="h-10 bg-muted rounded"></div>
-              </div>
-            </Card>
-          ))}
         </div>
-      </div>
+      </>
     );
   }
 
   return (
     <>
+      {/* Snap.js Sandbox (best practice: afterInteractive + data-client-key) */}
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="afterInteractive"
+      />
+
       <div className="space-y-6">
         {/* Saldo Koin */}
         <Card className="p-6">
@@ -145,7 +209,7 @@ export function KoinDashboard() {
                   Saldo Koin Anda
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Gunakan koin untuk mengajukan Ta&apos;aruf (5 koin per
+                  Gunakan koin untuk mengajukan Ta'aruf (5 koin per
                   pengajuan)
                 </p>
               </div>
@@ -190,7 +254,7 @@ export function KoinDashboard() {
 
                   <div className="text-sm text-muted-foreground">
                     <p>• {pkg.koin} koin</p>
-                    <p>• {Math.floor(pkg.koin / 5)} kali ajukan Ta&apos;aruf</p>
+                    <p>• {Math.floor(pkg.koin / 5)} kali ajukan Ta'aruf</p>
                   </div>
 
                   <Button
@@ -216,7 +280,7 @@ export function KoinDashboard() {
             <div className="text-sm">
               <h4 className="font-medium mb-1">Informasi Penggunaan Koin</h4>
               <ul className="space-y-1 text-muted-foreground">
-                <li>• Setiap pengajuan Ta&apos;aruf membutuhkan 5 koin</li>
+                <li>• Setiap pengajuan Ta'aruf membutuhkan 5 koin</li>
                 <li>• Koin tidak akan dikembalikan jika pengajuan ditolak</li>
                 <li>• Saldo koin tidak memiliki masa expired</li>
                 <li>• Pembayaran menggunakan sistem yang aman</li>
@@ -226,7 +290,7 @@ export function KoinDashboard() {
         </Card>
       </div>
 
-      {/* Payment Modal - Midtrans Sandbox Placeholder */}
+      {/* Payment Modal - Midtrans Sandbox */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>

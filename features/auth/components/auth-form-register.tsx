@@ -1,19 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   registerSchema,
   type RegisterData,
 } from "@/features/auth/schemas/register";
-import { signUp } from "@/features/auth/server/actions";
+import { signUp, startGoogleOAuth } from "@/server/actions/auth";
 
 export function AuthFormRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for error in URL params (from OAuth callback)
+  useEffect(() => {
+    const urlError = searchParams.get('message');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
+      // Clean URL
+      router.replace('/register');
+    }
+  }, [searchParams, router]);
 
   const {
     register,
@@ -28,16 +39,45 @@ export function AuthFormRegister() {
     setError("");
 
     try {
-      const result = await signUp(data);
+      const result = await signUp({
+        email: data.email,
+        password: data.password,
+        fullName: "", // Will be set during onboarding
+      });
 
       if (result.success) {
-        router.push("/onboarding/verifikasi");
+        if (result.status === "signed_in") {
+          router.refresh();
+          router.push("/onboarding/verifikasi");
+        } else {
+          // needs_verification
+          setError(""); // bukan error—info
+          // (opsional) tampilkan banner info bahwa tautan verifikasi sudah dikirim
+        }
       } else {
         setError(result.message || "Terjadi kesalahan saat mendaftar");
       }
     } catch (err) {
       setError("Terjadi kesalahan. Silakan coba lagi.");
     } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleGoogleSignUp() {
+    setIsLoading(true);
+    setError("");
+    try {
+      const res = await startGoogleOAuth("register");
+      if (res.success && res.url) {
+        // Arahkan user ke halaman Google OAuth
+        window.location.href = res.url;
+      } else {
+        setError(res.error || "Gagal memulai Google OAuth");
+        setIsLoading(false);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Terjadi kesalahan. Silakan coba lagi.");
       setIsLoading(false);
     }
   }
@@ -171,6 +211,7 @@ export function AuthFormRegister() {
 
         <button
           type="button"
+          onClick={handleGoogleSignUp}
           disabled={isLoading}
           className="w-full bg-muted text-muted-foreground border border-input rounded-md px-4 py-3 font-medium hover:bg-muted/80 focus-visible:ring-ring disabled:opacity-50"
         >

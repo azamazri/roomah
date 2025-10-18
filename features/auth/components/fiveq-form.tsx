@@ -6,65 +6,130 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { fiveQSchema, type FiveQData } from "@/features/auth/schemas/fiveq";
 import { NegativeGateModal } from "./negative-gate-modal";
-import { setOnboardingFlag } from "@/features/auth/lib/mock-session";
+import { saveVerification } from "@/server/actions/onboarding";
 
 const questions = [
-  "Apakah Anda sudah siap secara mental dan spiritual untuk menjalani Ta&apos;aruf?",
+  "Apakah Anda sudah siap secara mental dan spiritual untuk menjalani Ta'aruf?",
   "Apakah Anda memiliki tujuan yang jelas untuk menikah dalam waktu dekat (1-2 tahun)?",
   "Apakah Anda memiliki kesiapan finansial untuk berkeluarga?",
   "Apakah Anda sudah mendapat restu dari keluarga untuk mencari pasangan hidup?",
-  "Apakah Anda siap berkomitmen penuh dalam proses Ta&apos;aruf yang serius?",
+  "Apakah Anda siap berkomitmen penuh dalam proses Ta'aruf yang serius?",
 ];
 
 export function FiveQForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [negativeCount, setNegativeCount] = useState(0);
+  const [pendingData, setPendingData] = useState<{
+    q1: boolean;
+    q2: boolean;
+    q3: boolean;
+    q4: boolean;
+    q5: boolean;
+  } | null>(null);
   const router = useRouter();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FiveQData>({
-    resolver: zodResolver(fiveQSchema),
-  });
+  } = useForm<FiveQData>({ resolver: zodResolver(fiveQSchema) });
+
+  // helper normalisasi (radio mengirim "true"/"false" sebagai string)
+  const toBool = (v: unknown) => v === true || v === "true";
 
   function countNegativeAnswers(data: FiveQData): number {
-    return Object.values(data).filter((value) => value === false).length;
+    return Object.values(data).filter((v) => !toBool(v)).length;
   }
 
-  async function onSubmit(data: FiveQData) {
+  async function onSubmit(raw: FiveQData) {
     setIsLoading(true);
+    try {
+      // normalisasi payload ke boolean
+      const payload = {
+        q1: toBool(raw.q1),
+        q2: toBool(raw.q2),
+        q3: toBool(raw.q3),
+        q4: toBool(raw.q4),
+        q5: toBool(raw.q5),
+      };
 
-    const negatives = countNegativeAnswers(data);
-    setNegativeCount(negatives);
+      const negatives = countNegativeAnswers(raw);
+      setNegativeCount(negatives);
 
-    if (negatives > 0) {
-      setShowModal(true);
-      setIsLoading(false);
-    } else {
-      // All answers are positive, proceed directly
+      if (negatives > 0) {
+        // Ada jawaban negatif - simpan data sementara dan tampilkan modal
+        setPendingData(payload);
+        setShowModal(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Semua jawaban positif - simpan langsung tanpa committed flag
+      const result = await saveVerification(payload);
+      
+      if (!result.success) {
+        console.error("Failed to save verification:", result.error);
+        alert("Gagal menyimpan verifikasi. Silakan coba lagi.");
+        return;
+      }
+
+      // Lanjut ke CV
       await proceedToNext();
+    } catch (e) {
+      console.error(e);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
   async function proceedToNext() {
-    setOnboardingFlag("rmh_5q", "1");
+    // tidak ada lagi cookie mock (setOnboardingFlag). DB sudah tersimpan.
+    router.refresh(); // segarkan RSC agar state server terbaca
     router.push("/onboarding/cv");
   }
 
-  function handleModalContinue() {
+  async function handleModalContinue() {
     setShowModal(false);
-    proceedToNext();
+    setIsLoading(true);
+    
+    try {
+      if (!pendingData) {
+        console.error("No pending data to save");
+        return;
+      }
+      
+      // Save with committed = true
+      const result = await saveVerification({
+        ...pendingData,
+        committed: true,
+      });
+      
+      if (!result.success) {
+        console.error("Failed to save verification:", result.error);
+        alert("Gagal menyimpan verifikasi. Silakan coba lagi.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Clear pending data
+      setPendingData(null);
+      
+      // Proceed to next step
+      await proceedToNext();
+    } catch (e) {
+      console.error(e);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
+      setIsLoading(false);
+    }
   }
 
   function handleModalCancel() {
     setShowModal(false);
+    setPendingData(null); // Clear pending data
     setIsLoading(false);
-
-    // Redirect to home with failure message
-    router.push("/");
+    router.push("/"); // balik ke home jika user memilih batal
   }
 
   return (
@@ -114,7 +179,6 @@ export function FiveQForm() {
           })}
         </div>
 
-        {/* Global form error */}
         {errors.root && (
           <p
             className="text-sm text-destructive"

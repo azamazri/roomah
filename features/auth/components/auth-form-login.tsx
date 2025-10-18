@@ -1,16 +1,29 @@
+// features/auth/components/auth-form-login.tsx
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginData } from "@/features/auth/schemas/login";
-import { signIn } from "@/features/auth/server/actions";
+import { signIn, startGoogleOAuth } from "@/server/actions/auth";
 
 export function AuthFormLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // Check for error in URL params (from OAuth callback)
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlError = params.get('message');
+      if (urlError) {
+        setError(decodeURIComponent(urlError));
+        // Clean URL
+        window.history.replaceState({}, '', '/login');
+      }
+    }
+  });
 
   const {
     register,
@@ -23,26 +36,39 @@ export function AuthFormLogin() {
   async function onSubmit(data: LoginData) {
     setIsLoading(true);
     setError("");
-
     try {
-      const result = await signIn(data);
-
-      if (result.success) {
-        router.push("/cari-jodoh");
+      const res = await signIn({ email: data.email, password: data.password });
+      if (res.success) {
+        router.refresh();
+        const usp = new URLSearchParams(window.location.search);
+        const next = usp.get("next") || "/cari-jodoh";
+        router.push(next);
       } else {
-        setError("Email atau password tidak valid");
+        setError(res.message || "Gagal login");
       }
-    } catch (err) {
-      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } catch (e: Error) {
+      setError(e?.message || "Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleGoogleSignIn() {
-    alert(
-      "Google OAuth akan diintegrasikan pada fase selanjutnya. Untuk demo, gunakan login manual."
-    );
+  async function handleGoogleSignIn() {
+    setIsLoading(true);
+    setError("");
+    try {
+      const res = await startGoogleOAuth("login");
+      if (res.success && res.url) {
+        // Arahkan user ke Google OAuth
+        window.location.href = res.url;
+      } else {
+        setError(res.error || "Gagal memulai Google OAuth");
+        setIsLoading(false);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Terjadi kesalahan. Silakan coba lagi.");
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -76,11 +102,7 @@ export function AuthFormLogin() {
             disabled={isLoading}
           />
           {errors.email && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
+            <p className="text-sm text-destructive mt-1">
               {errors.email.message}
             </p>
           )}
@@ -102,11 +124,7 @@ export function AuthFormLogin() {
             disabled={isLoading}
           />
           {errors.password && (
-            <p
-              className="text-sm text-destructive mt-1"
-              role="alert"
-              aria-live="polite"
-            >
+            <p className="text-sm text-destructive mt-1">
               {errors.password.message}
             </p>
           )}
@@ -117,16 +135,17 @@ export function AuthFormLogin() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-primary text-primary-foreground rounded-md px-4 py-3 font-medium hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
+          className="w-full bg-primary text-primary-foreground rounded-md px-4 py-3 font-medium hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-50"
         >
           {isLoading ? "Memproses..." : "Masuk"}
         </button>
 
+        {/* TOMBOL GOOGLE — UI TETAP, kini berfungsi */}
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          className="w-full bg-muted text-muted-foreground border border-input rounded-md px-4 py-3 font-medium hover:bg-muted/80 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
+          className="w-full bg-muted text-muted-foreground border border-input rounded-md px-4 py-3 font-medium hover:bg-muted/80 focus-visible:ring-ring disabled:opacity-50"
         >
           Masuk dengan Google
         </button>

@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, MapPin, GraduationCap, Briefcase, Coins } from "lucide-react";
 import { CandidateModal } from "./candidate-modal";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useAjukanTaaruf } from "@/features/taaruf/hooks/use-taaruf";
 
 interface CandidateSummary {
   id: string;
@@ -39,60 +38,27 @@ export function CandidateCard({
   showTaarufButton = false,
 }: CandidateCardProps) {
   const [showModal, setShowModal] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
+  const { ajukan, isLoading } = useAjukanTaaruf();
 
   const handleAjukanTaaruf = async () => {
-    setIsSubmitting(true);
-    try {
-      const res = await fetch("/api/taaruf/propose", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ candidateId: candidate.id }),
-      });
-
-      const json = await res.json();
-
-      if (res.ok && json.success) {
-        toast.success(json.message || "Pengajuan Taaruf berhasil dikirim!");
-        router.refresh();
-      } else {
-        const message = json.error || "Terjadi kesalahan";
-        
-        if (message.includes("CV") || message.includes("approve")) {
-          toast.error("CV belum di-approve. Lengkapi CV Anda terlebih dahulu.");
-          router.push("/cv-saya?tab=edit");
-        } else if (message.includes("saldo") || message.includes("koin")) {
-          toast.error("Koin tidak mencukupi. Silakan top-up terlebih dahulu.");
-          router.push("/koin-saya");
-        } else if (message.includes("Taaruf aktif") || message.includes("menunggu")) {
-          toast.error("Anda sedang dalam proses Taaruf aktif atau menunggu.");
-        } else {
-          toast.error(message);
-        }
-      }
-    } catch (error) {
-      toast.error("Terjadi kesalahan saat mengirim pengajuan");
-    } finally {
-      setIsSubmitting(false);
-    }
+    await ajukan(candidate.id);
   };
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow transition-shadow">
-        <div className="p-6 space-y-4">
-          {/* Avatar and Badge in same row */}
-          <div className="flex items-start gap-4">
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-200 h-full">
+        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4 flex flex-col h-full">
+          {/* Avatar and Badge */}
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-primary/10">
               {candidate.avatar ? (
                 <img
                   src={candidate.avatar}
-                  alt={candidate.nama}
+                  alt={candidate.kodeKandidat}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <User className="h-10 w-10 text-muted-foreground" />
+                <User className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground" />
               )}
             </div>
             
@@ -101,7 +67,7 @@ export function CandidateCard({
                 variant={
                   candidate.status === "Siap Bertaaruf" ? "default" : "secondary"
                 }
-                className="mb-1"
+                className="text-xs sm:text-sm"
               >
                 {candidate.status}
               </Badge>
@@ -109,54 +75,55 @@ export function CandidateCard({
           </div>
 
           {/* Candidate Code & Job */}
-          <div>
-            <h3 className="font-semibold text-xl text-card-foreground">
+          <div className="flex-1">
+            <h3 className="font-bold text-lg sm:text-xl text-card-foreground mb-1 truncate">
               {candidate.kodeKandidat || candidate.nama || "Kandidat"}
             </h3>
-            <p className="text-base text-muted-foreground font-medium">
+            <p className="text-sm sm:text-base text-muted-foreground font-medium truncate">
               {candidate.pekerjaan || "-"}
             </p>
           </div>
 
-          {/* Info in single row with icons */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <User className="h-4 w-4" />
+          {/* Info Grid - Responsive stacking */}
+          <div className="flex flex-col gap-2 text-xs sm:text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 flex-shrink-0 text-primary" />
               <span>{candidate.umur || 0} tahun</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 flex-shrink-0 text-primary" />
               <span className="truncate">{candidate.domisili || "-"}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <GraduationCap className="h-4 w-4" />
-              <span>{candidate.pendidikan || "-"}</span>
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 flex-shrink-0 text-primary" />
+              <span className="truncate">{candidate.pendidikan || "-"}</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-3">
+          {/* Action Buttons - Responsive */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-3">
             <Button
               variant="outline"
-              size="default"
+              size="md"
               onClick={() => setShowModal(true)}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               Lihat CV
             </Button>
 
             {showTaarufButton && (
               <Button
-                size="default"
+                variant="primary"
+                size="md"
                 onClick={handleAjukanTaaruf}
                 disabled={
-                  isSubmitting || candidate.status !== "Siap Bertaaruf"
+                  isLoading || candidate.status !== "Siap Bertaaruf"
                 }
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full sm:flex-1 text-sm whitespace-nowrap"
               >
-                <Coins className="h-4 w-4 mr-1.5" />
+                <Coins className="h-4 w-4 mr-1" />
                 <span className="font-semibold">5</span>
-                <span className="ml-1.5">{isSubmitting ? "Mengirim..." : "Ajukan Taaruf"}</span>
+                <span className="ml-1">{isLoading ? "Mengirim..." : "Ajukan Taaruf"}</span>
               </Button>
             )}
           </div>

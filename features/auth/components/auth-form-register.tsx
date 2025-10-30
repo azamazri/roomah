@@ -9,20 +9,24 @@ import {
   type RegisterData,
 } from "@/features/auth/schemas/register";
 import { signUp, startGoogleOAuth } from "@/server/actions/auth";
+import { TermsModal } from "./terms-modal";
+import { PrivacyModal } from "./privacy-modal";
 
 export function AuthFormRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Check for error in URL params (from OAuth callback)
   useEffect(() => {
-    const urlError = searchParams.get('message');
+    const urlError = searchParams.get("message");
     if (urlError) {
       setError(decodeURIComponent(urlError));
       // Clean URL
-      router.replace('/register');
+      router.replace("/register");
     }
   }, [searchParams, router]);
 
@@ -185,8 +189,28 @@ export function AuthFormRegister() {
           />
           <label htmlFor="agree" className="text-sm text-card-foreground">
             Saya setuju dengan{" "}
-            <span className="text-link">Syarat dan Ketentuan</span> serta{" "}
-            <span className="text-link">Kebijakan Privasi</span> Roomah
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowTermsModal(true);
+              }}
+              className="text-link hover:underline font-medium"
+            >
+              Syarat dan Ketentuan
+            </button>{" "}
+            serta{" "}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowPrivacyModal(true);
+              }}
+              className="text-link hover:underline font-medium"
+            >
+              Kebijakan Privasi
+            </button>{" "}
+            Roomah
           </label>
         </div>
         {errors.agree && (
@@ -218,6 +242,10 @@ export function AuthFormRegister() {
           Daftar dengan Google
         </button>
       </div>
+
+      {/* Modals */}
+      <TermsModal open={showTermsModal} onOpenChange={setShowTermsModal} />
+      <PrivacyModal open={showPrivacyModal} onOpenChange={setShowPrivacyModal} />
     </form>
   );
 }

@@ -20,14 +20,14 @@ export default function OnboardingStepper() {
 
   return (
     <div className="sticky top-0 z-50 bg-card border-b border-input">
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="max-w-4xl mx-auto px-2 sm:px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between">
           {steps.map((step, index) => (
-            <div key={step.path} className="flex items-center">
-              <div className="flex items-center">
+            <div key={step.path} className="flex items-center flex-1">
+              <div className="flex items-center min-w-0">
                 <div
                   className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                    w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium flex-shrink-0
                     ${
                       index < currentStepIndex
                         ? "bg-success text-success-foreground"
@@ -40,7 +40,7 @@ export default function OnboardingStepper() {
                   {index < currentStepIndex ? "✓" : index + 1}
                 </div>
                 <span
-                  className={`ml-3 text-sm font-medium ${
+                  className={`ml-1.5 sm:ml-3 text-xs sm:text-sm font-medium truncate ${
                     index <= currentStepIndex
                       ? "text-card-foreground"
                       : "text-muted-foreground"
@@ -52,7 +52,7 @@ export default function OnboardingStepper() {
 
               {index < steps.length - 1 && (
                 <div
-                  className={`mx-4 h-0.5 w-12 ${
+                  className={`mx-1 sm:mx-4 h-0.5 w-4 sm:w-12 flex-shrink-0 ${
                     index < currentStepIndex ? "bg-success" : "bg-muted"
                   }`}
                 />

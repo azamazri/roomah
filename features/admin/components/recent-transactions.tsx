@@ -29,16 +29,21 @@ export async function RecentTransactions() {
                 key={transaction.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
               >
-                <div className="space-y-1">
+                <div className="space-y-1 flex-1 min-w-0">
                   <div className="text-sm font-medium">
                     Rp {transaction.amount.toLocaleString("id-ID")}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {transaction.userId.slice(0, 8)}... •{" "}
-                    {formatDistanceToNow(new Date(transaction.createdAt), {
-                      addSuffix: true,
-                      locale: id,
-                    })}
+                  <div className="text-xs text-muted-foreground truncate">
+                    {transaction.user?.full_name || "Unknown"}
+                    {transaction.created_at && (
+                      <>
+                        {" • "}
+                        {formatDistanceToNow(new Date(transaction.created_at), {
+                          addSuffix: true,
+                          locale: id,
+                        })}
+                      </>
+                    )}
                   </div>
                 </div>
                 <Badge
@@ -49,7 +54,7 @@ export async function RecentTransactions() {
                       ? "warning"
                       : "destructive"
                   }
-                  className="text-xs"
+                  className="text-xs shrink-0 ml-2"
                 >
                   {transaction.status === "settlement"
                     ? "Berhasil"

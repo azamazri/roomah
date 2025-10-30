@@ -27,7 +27,7 @@ export function Pagination({
   const renderPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
-  const start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
   const end = Math.min(totalPages, start + maxVisible - 1);
 
     if (end - start < maxVisible - 1) {

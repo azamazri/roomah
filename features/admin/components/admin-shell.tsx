@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -57,7 +58,7 @@ const menuItems = [
     scopes: ["finance"],
   },
   {
-    href: "/admin/posting-media",
+    href: "/admin/medsos",
     label: "Posting Media",
     icon: Share2,
     scopes: ["posting_management"],
@@ -135,7 +136,7 @@ export function AdminShell({ children, user }: AdminShellProps) {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4">
+            <nav className="flex-1 p-4 overflow-y-auto">
               <ul className="space-y-2">
                 {allowedMenuItems.map((item) => {
                   const Icon = item.icon;

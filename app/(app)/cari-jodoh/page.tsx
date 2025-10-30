@@ -26,19 +26,39 @@ export default async function Page({ searchParams }: PageProps) {
   } = await supabase.auth.getUser();
 
   let gender: "M" | "F" | undefined = undefined;
+  let hideGenderFilter = false;
+
   if (user) {
+    // Check CV status first to determine if user has approved CV
+    const { data: cvData } = await supabase
+      .from("cv_data")
+      .select("status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const cvStatus = cvData?.status;
+    const isApproved = cvStatus === "APPROVED";
+
+    // Get user's gender from profiles
     const { data: profile } = await supabase
       .from("profiles")
       .select("gender")
       .eq("user_id", user.id)
       .maybeSingle();
     
-    // Convert IKHWAN/AKHWAT enum to M/F for FilterBar compatibility
     const profileGender = profile?.gender as string | null;
-    if (profileGender === "IKHWAN") {
-      gender = "M";
-    } else if (profileGender === "AKHWAT") {
-      gender = "F";
+
+    // BUSINESS LOGIC:
+    // If CV is APPROVED → hide gender filter & force opposite gender
+    // If CV is NOT APPROVED → show gender filter & show all candidates
+    if (isApproved && profileGender) {
+      hideGenderFilter = true;
+      // Force opposite gender - IKHWAN sees AKHWAT (F), AKHWAT sees IKHWAN (M)
+      if (profileGender === "IKHWAN") {
+        gender = "F"; // Show AKHWAT
+      } else if (profileGender === "AKHWAT") {
+        gender = "M"; // Show IKHWAN
+      }
     }
   }
 
@@ -56,13 +76,18 @@ export default async function Page({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <FilterBar hideGender forceOppositeOfGender={gender} provinces={provinces} />
+      <FilterBar 
+        hideGender={hideGenderFilter} 
+        forceOppositeOfGender={gender} 
+        provinces={provinces} 
+      />
       <CandidateTeaser
         page={page}
         pageSize={6}
         baseUrl="/cari-jodoh"
+        currentUserId={user?.id}
         filters={{
-          gender: (params.gender as string) ?? "",
+          gender: gender ? (gender === "M" ? "IKHWAN" : "AKHWAT") : (params.gender as string) ?? "",
           ageRange: (params.ageRange as string) ?? "",
           education: (params.education as string) ?? "",
           province: (params.province as string) ?? "",

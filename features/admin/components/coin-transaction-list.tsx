@@ -131,29 +131,31 @@ export function CoinTransactionList({
     {
       key: "id",
       label: "ID Transaksi",
-      render: (item: CoinRecord) => (
-        <div className="font-mono text-xs">{item.id}</div>
+      render: (item: any) => (
+        <div className="font-mono text-xs truncate max-w-[200px]" title={item.id || 'N/A'}>
+          {item.id || <span className="text-muted-foreground">N/A</span>}
+        </div>
       ),
     },
     {
       key: "user",
       label: "Pengguna",
-      render: (item: CoinRecord) => (
+      render: (item: any) => (
         <div className="space-y-1">
           <div className="font-medium text-sm">
-            {item.userId.slice(0, 12)}...
+            {item.userName || "Unknown"}
           </div>
-          <div className="text-xs text-muted-foreground">{item.provider}</div>
+          <div className="text-xs text-muted-foreground">{item.userEmail || "-"}</div>
         </div>
       ),
     },
     {
       key: "amount",
       label: "Jumlah",
-      render: (item: CoinRecord) => (
+      render: (item: any) => (
         <div className="text-right">
-          <div className="font-semibold">
-            Rp {item.amount.toLocaleString("id-ID")}
+          <div className={`font-semibold ${item.type === 'topup' ? 'text-success' : 'text-warning'}`}>
+            {item.type === 'topup' ? '+' : '-'} {item.amount || 0} Koin
           </div>
         </div>
       ),
@@ -161,13 +163,23 @@ export function CoinTransactionList({
     {
       key: "status",
       label: "Status",
-      render: (item: CoinRecord) => getStatusBadge(item.status),
+      render: (item: any) => getStatusBadge(item.status),
     },
     {
       key: "createdAt",
       label: "Waktu",
-      render: (item: CoinRecord) => {
+      render: (item: any) => {
+        if (!item.createdAt) {
+          return <div className="text-sm text-muted-foreground">-</div>;
+        }
+        
         const date = new Date(item.createdAt);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return <div className="text-sm text-muted-foreground">Invalid date</div>;
+        }
+        
         return (
           <div className="space-y-1">
             <div className="text-sm">{date.toLocaleDateString("id-ID")}</div>
@@ -275,6 +287,11 @@ export function CoinTransactionList({
             isLoading={isLoading}
             emptyMessage="Tidak ada transaksi ditemukan"
             emptyIcon={Coins}
+            renderRowFooter={(item: any) => (
+              <div className="text-sm text-muted-foreground">
+                {item.description || '-'}
+              </div>
+            )}
           />
         </CardContent>
       </Card>

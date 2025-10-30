@@ -1,6 +1,6 @@
 // features/auth/components/auth-form-login.tsx
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,17 +13,18 @@ export function AuthFormLogin() {
   const router = useRouter();
 
   // Check for error in URL params (from OAuth callback)
-  useState(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlError = params.get('message');
       if (urlError) {
         setError(decodeURIComponent(urlError));
-        // Clean URL
-        window.history.replaceState({}, '', '/login');
+        // Clean URL without triggering navigation
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
       }
     }
-  });
+  }, []);
 
   const {
     register,
@@ -37,16 +38,17 @@ export function AuthFormLogin() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await signIn({ email: data.email, password: data.password });
+      const res = await signIn(data.email, data.password);
       if (res.success) {
-        router.refresh();
         const usp = new URLSearchParams(window.location.search);
         const next = usp.get("next") || "/cari-jodoh";
+        
+        // Navigate directly without refresh to avoid potential router issues
         router.push(next);
       } else {
-        setError(res.message || "Gagal login");
+        setError(res.error || "Gagal login. Periksa email dan password Anda.");
       }
-    } catch (e: Error) {
+    } catch (e: any) {
       setError(e?.message || "Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);

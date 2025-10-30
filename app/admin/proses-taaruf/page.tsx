@@ -6,9 +6,9 @@ export default function ProsesTaarufPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Proses Ta'aruf</h1>
+        <h1 className="text-3xl font-bold">Proses Ta&apos;aruf</h1>
         <p className="text-muted-foreground">
-          Kelola proses Ta'aruf pasangan dengan sistem kanban drag & drop
+          Kelola proses Ta&apos;aruf pasangan dengan sistem kanban drag & drop
         </p>
       </div>
 
@@ -18,3 +18,4 @@ export default function ProsesTaarufPage() {
     </div>
   );
 }
+

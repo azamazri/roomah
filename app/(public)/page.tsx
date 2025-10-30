@@ -1,5 +1,4 @@
 // app/(public)/page.tsx
-import Link from "next/link";
 import Image from "next/image";
 import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
@@ -24,10 +23,10 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const sp = await searchParams;
   const page = Number(sp?.page ?? "1") || 1;
-  
+
   // Fetch provinces for filter
   const provinces = await getProvincesList();
-  
+
   // Extract filter params
   const filters = {
     gender: (sp.gender as string) ?? "",
@@ -47,7 +46,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             Membangun Peradaban
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Platform Ta'aruf Islami yang membantu Anda menemukan pasangan
+            Platform Taaruf Islami yang membantu Anda menemukan pasangan
             shaleh/shalehah untuk membangun keluarga sakinah.
           </p>
           <Button size="lg" className="rounded-full" asChild>
@@ -60,7 +59,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {/* Banner Section */}
       <section className="py-16">
-        <div className="container-x">
+        <div className="container mx-auto px-4">
           <div className="relative rounded-2xl min-h-[400px] hero-gradient overflow-hidden elevated">
             <Image
               src="/images/hero-banner.webp"
@@ -88,7 +87,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       {/* Search Section */}
       <section id="search-section" className="py-16 bg-[hsl(var(--surface-2))]">
-        <div className="w-full max-w-[1600px] mx-auto px-6 lg:px-12">
+        <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">
               Temukan Pasangan Hidup Anda
@@ -103,61 +102,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <FilterBar provinces={provinces} />
           </div>
 
-          <CandidateTeaser
-            page={page}
-            pageSize={6}
-            filters={filters}
-          />
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="container-x">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">
-              Mengapa Memilih Roomah?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Platform Ta'aruf terpercaya dengan pendekatan Islami yang
-              sesuai syariat
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="text-4xl mb-4">🤝</div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">
-                Ta'aruf Sesuai Syariat
-              </h3>
-              <p className="text-muted-foreground">
-                Proses Ta'aruf yang sesuai dengan ajaran Islam dan
-                melibatkan keluarga dalam setiap tahapannya.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-4xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">
-                Privasi Terjamin
-              </h3>
-              <p className="text-muted-foreground">
-                Data pribadi Anda aman dan terlindungi dengan sistem keamanan
-                tingkat tinggi.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-4xl mb-4">🎯</div>
-              <h3 className="text-xl font-semibold text-foreground mb-3">
-                Profil Terverifikasi
-              </h3>
-              <p className="text-muted-foreground">
-                Semua profil telah melewati proses verifikasi untuk memastikan
-                keaslian dan keseriusan niat.
-              </p>
-            </div>
-          </div>
+          <CandidateTeaser page={page} pageSize={6} filters={filters} />
         </div>
       </section>
     </>

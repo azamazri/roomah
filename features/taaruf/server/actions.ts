@@ -1,467 +1,688 @@
+"use server";
+
 import { createClient } from "@/server/db/client";
+import { generateTaarufCodeSafe } from "@/server/services/sequence";
+
+// Configuration - Make this tunable via env later
+const TAARUF_COST_KOIN = parseInt(process.env.TAARUF_COST_KOIN || "5", 10);
 
 /**
- * TAARUF SERVER ACTIONS - ROOMAH MVP
- * Business logic: Guards, koin deduction, taaruf flow
+ * Business Guards for Ajukan Taaruf
+ * Returns validation result with specific error messages
  */
-
-// ============================================================================
-// BUSINESS GUARDS
-// ============================================================================
-
-/**
- * Check if user can ajukan taaruf
- * Guards:
- * 1. CV must be APPROVED
- * 2. Must have sufficient koin (5 koin)
- * 3. Not already in active taaruf
- * 4. Not gender sama
- */
-async function checkCanAjukanTaaruf(
-  fromUserId: string,
-  toUserId: string
-): Promise<{ canAjukan: boolean; reason?: string }> {
-  const supabase = await createClient();
-
-  // Check CV approved
-  const { data: fromCv } = await supabase
-    .from("cv_data")
-    .select("status, gender")
-    .eq("user_id", fromUserId)
-    .single();
-
-  if (!fromCv || fromCv.status !== "APPROVED") {
+export async function validateTaarufRequest(toUserId: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Guard 1: User must be authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        isValid: false,
+        error: "Anda harus login terlebih dahulu",
+        errorCode: "NOT_AUTHENTICATED",
+      };
+    }
+    
+    // Guard 2: CV status must be APPROVED
+    const { data: cvData, error: cvError } = await supabase
+      .from("cv_data")
+      .select("status, candidate_code")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    
+    if (cvError || !cvData) {
+      return {
+        isValid: false,
+        error: "CV Anda belum dibuat. Silakan lengkapi CV terlebih dahulu.",
+        errorCode: "CV_NOT_FOUND",
+        redirectTo: "/cv-saya",
+      };
+    }
+    
+    if (cvData.status !== "APPROVED") {
+      return {
+        isValid: false,
+        error: `CV Anda dalam status ${cvData.status}. Hanya CV dengan status APPROVED yang dapat mengajukan taaruf.`,
+        errorCode: "CV_NOT_APPROVED",
+        redirectTo: "/cv-saya",
+      };
+    }
+    
+    // Guard 3: Koin balance must be sufficient
+    // Use RPC function to get real-time balance from wallet_transactions
+    const { data: balanceData, error: balanceError } = await supabase
+      .rpc("get_wallet_balance", { p_user_id: user.id });
+    
+    if (balanceError) {
+      console.error("Error getting wallet balance:", balanceError);
+      return {
+        isValid: false,
+        error: "Gagal memeriksa saldo koin Anda",
+        errorCode: "BALANCE_CHECK_ERROR",
+      };
+    }
+    
+    // Convert cents to koin (100 cents = 1 koin)
+    const currentBalance = Math.floor((balanceData || 0) / 100);
+    
+    if (currentBalance < TAARUF_COST_KOIN) {
+      return {
+        isValid: false,
+        error: `Saldo koin Anda tidak cukup. Dibutuhkan ${TAARUF_COST_KOIN} koin untuk mengajukan taaruf.`,
+        errorCode: "INSUFFICIENT_KOIN",
+        redirectTo: "/koin-saya",
+        requiredKoin: TAARUF_COST_KOIN,
+        currentBalance: currentBalance,
+      };
+    }
+    
+    // Guard 4: User must not have active taaruf
+    const { data: activeTaaruf, error: activeTaarufError } = await supabase
+      .from("taaruf_sessions")
+      .select("id, taaruf_code")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+    
+    if (activeTaarufError) {
+      console.error("Error checking active taaruf:", activeTaarufError);
+    }
+    
+    if (activeTaaruf) {
+      return {
+        isValid: false,
+        error: `Anda sedang dalam proses taaruf aktif (${activeTaaruf.taaruf_code}). Selesaikan taaruf ini terlebih dahulu.`,
+        errorCode: "ACTIVE_TAARUF_EXISTS",
+        redirectTo: "/riwayat-taaruf",
+      };
+    }
+    
+    // Guard 5: Cannot request to self
+    if (toUserId === user.id) {
+      return {
+        isValid: false,
+        error: "Anda tidak dapat mengajukan taaruf kepada diri sendiri",
+        errorCode: "SELF_REQUEST",
+      };
+    }
+    
+    // Guard 6: Check if already has pending request to this user
+    const { data: existingRequest, error: existingRequestError } = await supabase
+      .from("taaruf_requests")
+      .select("id, status")
+      .eq("from_user", user.id)
+      .eq("to_user", toUserId)
+      .in("status", ["PENDING", "ACCEPTED"])
+      .maybeSingle();
+    
+    if (existingRequestError) {
+      console.error("Error checking existing request:", existingRequestError);
+    }
+    
+    if (existingRequest) {
+      const statusText = existingRequest.status === "PENDING" ? "menunggu persetujuan" : "sudah diterima";
+      return {
+        isValid: false,
+        error: `Anda sudah memiliki pengajuan taaruf yang ${statusText} kepada kandidat ini`,
+        errorCode: "REQUEST_EXISTS",
+      };
+    }
+    
+    // All guards passed
     return {
-      canAjukan: false,
-      reason: "CV Anda belum disetujui admin. Lengkapi dan ajukan CV terlebih dahulu.",
+      isValid: true,
+      message: "Validation passed",
+    };
+    
+  } catch (error) {
+    console.error("Error validating taaruf request:", error);
+    return {
+      isValid: false,
+      error: "Terjadi kesalahan saat validasi",
+      errorCode: "VALIDATION_ERROR",
     };
   }
-
-  // Check target CV approved
-  const { data: toCv } = await supabase
-    .from("cv_data")
-    .select("status, gender")
-    .eq("user_id", toUserId)
-    .single();
-
-  if (!toCv || toCv.status !== "APPROVED") {
-    return {
-      canAjukan: false,
-      reason: "Kandidat ini tidak tersedia untuk taaruf.",
-    };
-  }
-
-  // Check opposite gender
-  if (fromCv.gender === toCv.gender) {
-    return {
-      canAjukan: false,
-      reason: "Taaruf hanya dapat dilakukan dengan lawan jenis.",
-    };
-  }
-
-  // Check koin balance
-  const { data: balance } = await supabase
-    .from("wallet_balances_v")
-    .select("balance")
-    .eq("user_id", fromUserId)
-    .single();
-
-  if (!balance || balance.balance < 500) {
-    // 500 = 5 koin (1 koin = 100)
-    return {
-      canAjukan: false,
-      reason: "Saldo koin tidak cukup. Minimal 5 koin untuk mengajukan taaruf.",
-    };
-  }
-
-  // Check active taaruf
-  const { data: activeTaaruf } = await supabase
-    .from("taaruf_sessions")
-    .select("id")
-    .or(`user_a.eq.${fromUserId},user_b.eq.${fromUserId}`)
-    .eq("status", "ACTIVE")
-    .single();
-
-  if (activeTaaruf) {
-    return {
-      canAjukan: false,
-      reason: "Anda sedang dalam proses taaruf aktif. Selesaikan terlebih dahulu.",
-    };
-  }
-
-  // Check if already sent request to this user
-  const { data: existingRequest } = await supabase
-    .from("taaruf_requests")
-    .select("id")
-    .eq("from_user", fromUserId)
-    .eq("to_user", toUserId)
-    .eq("status", "PENDING")
-    .single();
-
-  if (existingRequest) {
-    return {
-      canAjukan: false,
-      reason: "Anda sudah mengajukan taaruf ke kandidat ini. Tunggu respons.",
-    };
-  }
-
-  return { canAjukan: true };
 }
 
-// ============================================================================
-// AJUKAN TAARUF
-// ============================================================================
-
 /**
- * Ajukan taaruf dengan business guards dan koin deduction
+ * Ajukan Taaruf
+ * Deducts koin and creates taaruf request
  */
-export async function ajukanTaaruf(fromUserId: string, toUserId: string) {
-  const supabase = await createClient();
-
-  // Check guards
-  const guardResult = await checkCanAjukanTaaruf(fromUserId, toUserId);
-  if (!guardResult.canAjukan) {
-    return {
-      success: false,
-      error: guardResult.reason || "Tidak dapat mengajukan taaruf",
-      data: null,
-    };
-  }
-
-  // Start transaction-like operations
+export async function ajukanTaaruf(toUserId: string) {
   try {
-    // 1. Deduct 5 koin (500 cents)
-    const { error: ledgerError } = await supabase
-      .from("wallet_transactions")
-      .insert({
-        user_id: fromUserId,
-        type: "DEBIT",
-        amount_cents: 500, // 5 koin
-        reason: "TAARUF_COST",
-        description: `Biaya pengajuan taaruf`,
-        created_at: new Date().toISOString(),
-      });
-
-    if (ledgerError) {
-      throw new Error("Gagal memotong koin: " + ledgerError.message);
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
     }
-
-    // 2. Create taaruf request
+    
+    // Validate request with all business guards
+    const validation = await validateTaarufRequest(toUserId);
+    
+    if (!validation.isValid) {
+      return {
+        success: false,
+        error: validation.error,
+        errorCode: validation.errorCode,
+        redirectTo: validation.redirectTo,
+      };
+    }
+    
+    // TRANSACTION START: Create request first, then deduct koin
+    // IMPORTANT: Must create request BEFORE deducting koin because RLS policy
+    // on taaruf_requests checks balance via can_ajukan_taaruf() function
+    
+    // 1. Create taaruf request (RLS will check balance BEFORE deduction)
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
-
-    const { data: request, error: requestError} = await supabase
+    expiresAt.setHours(expiresAt.getHours() + 72); // 72 hours expiry
+    
+    const { error: requestError } = await supabase
       .from("taaruf_requests")
       .insert({
-        from_user: fromUserId,
+        from_user: user.id,
         to_user: toUserId,
         status: "PENDING",
         expires_at: expiresAt.toISOString(),
         created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
+      });
+    
     if (requestError) {
-      // Rollback: refund koin (simplified for MVP)
-      await supabase.from("wallet_transactions").insert({
-        user_id: fromUserId,
-        type: "CREDIT",
-        amount_cents: 500,
-        reason: "REFUND",
-        description: "Refund gagal ajukan taaruf",
+      return {
+        success: false,
+        error: "Gagal membuat pengajuan taaruf. Silakan coba lagi.",
+      };
+    }
+    
+    // 2. Deduct koin AFTER request created successfully
+    const idempotencyKey = `taaruf-${user.id}-${toUserId}-${Date.now()}`;
+    
+    const { error: deductError } = await supabase
+      .from("wallet_transactions")
+      .insert({
+        user_id: user.id,
+        type: "DEBIT",
+        amount_cents: TAARUF_COST_KOIN * 100, // Convert to cents (5 koin = 500 cents)
+        reason: "TAARUF_COST",
+        idempotency_key: idempotencyKey,
         created_at: new Date().toISOString(),
       });
-
-      throw new Error("Gagal membuat pengajuan: " + requestError.message);
+    
+    if (deductError) {
+      console.error("Error deducting koin:", deductError);
+      
+      // Rollback: Delete the request we just created
+      await supabase
+        .from("taaruf_requests")
+        .delete()
+        .eq("from_user", user.id)
+        .eq("to_user", toUserId)
+        .eq("status", "PENDING");
+      
+      return {
+        success: false,
+        error: "Gagal mengurangi saldo koin. Pengajuan taaruf dibatalkan.",
+      };
     }
-
+    
     return {
       success: true,
-      data: request,
-      error: null,
-      message: "Taaruf berhasil diajukan. Koin telah dipotong 5 koin.",
+      message: `Pengajuan taaruf berhasil dikirim! ${TAARUF_COST_KOIN} koin telah dipotong.`,
+      koinDeducted: TAARUF_COST_KOIN,
     };
-  } catch (error: any) {
+    
+  } catch (error) {
+    console.error("Error ajukan taaruf:", error);
     return {
       success: false,
-      error: error.message || "Gagal mengajukan taaruf",
-      data: null,
+      error: error instanceof Error ? error.message : "Failed to create taaruf request",
     };
   }
 }
 
-// ============================================================================
-// GET TAARUF REQUESTS
-// ============================================================================
-
 /**
- * Get CV Masuk (incoming requests)
+ * Accept Taaruf Request
+ * Creates active taaruf session with code
  */
-export async function getCvMasuk(userId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("taaruf_requests")
-    .select(
-      `
-      id,
-      from_user,
-      to_user,
-      status,
-      created_at,
-      expires_at
-    `
-    )
-    .eq("to_user", userId)
-    .eq("status", "PENDING")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return { success: false, error: error.message, data: null };
-  }
-
-  return { success: true, data, error: null };
-}
-
-/**
- * Get CV Dikirim (sent requests)
- */
-export async function getCvDikirim(userId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("taaruf_requests")
-    .select(
-      `
-      id,
-      from_user,
-      to_user,
-      status,
-      created_at,
-      expires_at
-    `
-    )
-    .eq("from_user", userId)
-    .order("created_at", { ascending: false});
-
-  if (error) {
-    return { success: false, error: error.message, data: null };
-  }
-
-  return { success: true, data, error: null };
-}
-
-/**
- * Get Taaruf Aktif (active sessions)
- */
-export async function getTaarufAktif(userId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("taaruf_sessions")
-    .select(
-      `
-      id,
-      taaruf_code,
-      user_a,
-      user_b,
-      status,
-      started_at,
-      ended_at
-    `
-    )
-    .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .eq("status", "ACTIVE")
-    .order("started_at", { ascending: false });
-
-  if (error) {
-    return { success: false, error: error.message, data: null };
-  }
-
-  return { success: true, data, error: null };
-}
-
-// ============================================================================
-// RESPOND TO TAARUF REQUEST
-// ============================================================================
-
-/**
- * Respond to taaruf request (Accept/Reject)
- */
-export async function respondToTaarufRequest(
-  userId: string,
-  requestId: string,
-  response: "ACCEPTED" | "REJECTED",
-  rejectionReason?: string
-) {
-  const supabase = await createClient();
-
-  // Get request details
-  const { data: request, error: fetchError } = await supabase
-    .from("taaruf_requests")
-    .select("*")
-    .eq("id", requestId)
-    .eq("to_user", userId) // Only recipient can respond
-    .eq("status", "PENDING")
-    .single();
-
-  if (fetchError || !request) {
-    return {
-      success: false,
-      error: "Pengajuan tidak ditemukan atau sudah direspons",
-      data: null,
-    };
-  }
-
-  // Check expiry
-  if (new Date(request.expires_at) < new Date()) {
-    // Auto-reject expired request
-    await supabase
+export async function acceptTaarufRequest(requestId: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
+    }
+    
+    // Get request details
+    const { data: request, error: requestError } = await supabase
       .from("taaruf_requests")
-      .update({
-        status: "REJECTED",
-        rejection_reason: "Pengajuan kadaluarsa (7 hari)",
-        responded_at: new Date().toISOString(),
-      })
-      .eq("id", requestId);
-
-    return {
-      success: false,
-      error: "Pengajuan telah kadaluarsa",
-      data: null,
-    };
-  }
-
-  if (response === "REJECTED") {
-    // Update request status
-    const { data, error } = await supabase
-      .from("taaruf_requests")
-      .update({
-        status: "REJECTED",
-        rejection_reason: rejectionReason || "Tidak ada alasan",
-        responded_at: new Date().toISOString(),
-      })
+      .select("*")
       .eq("id", requestId)
+      .eq("to_user", user.id) // Verify this request is for current user
+      .eq("status", "PENDING")
+      .single();
+    
+    if (requestError || !request) {
+      return {
+        success: false,
+        error: "Pengajuan taaruf tidak ditemukan atau sudah diproses",
+      };
+    }
+    
+    // Check if user already has active taaruf
+    const { data: activeTaaruf } = await supabase
+      .from("taaruf_sessions")
+      .select("id")
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .eq("status", "ACTIVE")
+      .maybeSingle();
+    
+    if (activeTaaruf) {
+      return {
+        success: false,
+        error: "Anda sudah memiliki taaruf aktif. Selesaikan terlebih dahulu.",
+      };
+    }
+    
+    // Generate taaruf code
+    const taarufCode = await generateTaarufCodeSafe();
+    
+    if (!taarufCode) {
+      return {
+        success: false,
+        error: "Gagal generate kode taaruf. Silakan coba lagi.",
+      };
+    }
+    
+    // Create active taaruf session
+    const { data: sessionData, error: sessionError} = await supabase
+      .from("taaruf_sessions")
+      .insert({
+        user_a: request.from_user,
+        user_b: request.to_user,
+        taaruf_code: taarufCode,
+        status: "ACTIVE",
+      })
       .select()
       .single();
-
-    if (error) {
-      return { success: false, error: error.message, data: null };
+    
+    if (sessionError) {
+      
+      // If error is about RLS policy, provide more helpful message
+      if (sessionError.code === '42501' || sessionError.message?.includes('policy')) {
+        return {
+          success: false,
+          error: `RLS Policy Error: ${sessionError.message}. Pastikan RLS policy untuk INSERT di table taaruf_sessions sudah dibuat.`,
+        };
+      }
+      
+      return {
+        success: false,
+        error: `Gagal membuat sesi taaruf: ${sessionError.message || 'Unknown error'}`,
+      };
     }
-
-    return {
-      success: true,
-      data,
-      error: null,
-      message: "Pengajuan taaruf ditolak",
-    };
-  }
-
-  // ACCEPTED - Create taaruf session
-  try {
-    // 1. Update request status
-    await supabase
+    
+    // Update request status to ACCEPTED
+    const { error: updateError } = await supabase
       .from("taaruf_requests")
       .update({
         status: "ACCEPTED",
-        responded_at: new Date().toISOString(),
+        decided_at: new Date().toISOString(),
       })
       .eq("id", requestId);
-
-    // 2. Generate taaruf code (call database function)
-    const { data: codeResult, error: codeError } = await supabase.rpc(
-      "generate_taaruf_code"
-    );
-
-    if (codeError) {
-      throw new Error("Gagal generate kode taaruf: " + codeError.message);
-    }
-
-    const taarufCode = codeResult;
-
-    // 3. Create taaruf session
-    const { data: session, error: sessionError } = await supabase
-      .from("taaruf_sessions")
+    
+    // Create notification for stage tracking (Zoom 1 stage)
+    // This allows admin kanban to show the taaruf in "Zoom 1" column
+    await supabase
+      .from("notifications")
       .insert({
-        taaruf_code: taarufCode,
-        user_a: request.from_user,
-        user_b: request.to_user,
-        status: "ACTIVE",
-        started_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (sessionError) {
-      throw new Error("Gagal membuat sesi taaruf: " + sessionError.message);
-    }
-
+        user_id: request.from_user, // Notify User A (sender)
+        type: "TAARUF_STAGE_UPDATED",
+        title: "Taaruf Diterima",
+        message: `Pengajuan Taaruf Anda telah diterima. Kode Taaruf: ${taarufCode}`,
+        data: {
+          taaruf_id: sessionData.id,
+          taaruf_code: taarufCode,
+          stage: "Zoom 1",
+          request_id: requestId,
+        },
+      });
+    
     return {
       success: true,
-      data: session,
-      error: null,
-      message: `Taaruf diterima! Kode taaruf: ${taarufCode}`,
+      message: `Taaruf berhasil dimulai dengan kode: ${taarufCode}`,
+      taarufCode,
     };
-  } catch (error: any) {
+    
+  } catch (error) {
+    console.error("Error accepting taaruf:", error);
     return {
       success: false,
-      error: error.message || "Gagal merespons pengajuan",
+      error: error instanceof Error ? error.message : "Failed to accept taaruf",
+    };
+  }
+}
+
+/**
+ * Reject Taaruf Request
+ */
+export async function rejectTaarufRequest(requestId: string, rejectReason?: string) {
+  try {
+    const supabase = await createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
+    }
+    
+    // Verify request belongs to current user
+    const { data: request, error: requestError } = await supabase
+      .from("taaruf_requests")
+      .select("*")
+      .eq("id", requestId)
+      .eq("to_user", user.id)
+      .eq("status", "PENDING")
+      .single();
+    
+    if (requestError || !request) {
+      return {
+        success: false,
+        error: "Pengajuan taaruf tidak ditemukan atau sudah diproses",
+      };
+    }
+    
+    // Update request status to REJECTED
+    const { error: updateError } = await supabase
+      .from("taaruf_requests")
+      .update({
+        status: "REJECTED",
+        decided_at: new Date().toISOString(),
+        reason_reject: rejectReason || null,
+      })
+      .eq("id", requestId);
+    
+    if (updateError) {
+      console.error("Error rejecting request:", updateError);
+      return {
+        success: false,
+        error: "Gagal menolak pengajuan",
+      };
+    }
+    
+    return {
+      success: true,
+      message: "Pengajuan taaruf berhasil ditolak",
+    };
+    
+  } catch (error) {
+    console.error("Error rejecting taaruf:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to reject taaruf",
+    };
+  }
+}
+
+/**
+ * Get Taaruf Requests (CV Masuk - Incoming)
+ */
+export async function getIncomingRequests() {
+  try {
+    const supabase = await createClient();
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+        data: null,
+      };
+    }
+    
+    const { data: requests, error } = await supabase
+      .from("taaruf_requests")
+      .select(`
+        id,
+        from_user,
+        status,
+        created_at,
+        expires_at,
+        sender:profiles!taaruf_requests_from_user_fkey (
+          user_id,
+          full_name,
+          gender,
+          cv_data!cv_data_user_id_fkey (
+            candidate_code,
+            birth_date,
+            education,
+            occupation
+          )
+        )
+      `)
+      .eq("to_user", user.id)
+      .eq("status", "PENDING")
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      return {
+        success: false,
+        error: "Failed to fetch requests",
+        data: null,
+      };
+    }
+    
+    return {
+      success: true,
+      data: requests,
+    };
+    
+  } catch (error) {
+    console.error("Error fetching incoming requests:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch requests",
       data: null,
     };
   }
 }
 
-// ============================================================================
-// END TAARUF SESSION
-// ============================================================================
-
 /**
- * End taaruf session (optional for MVP)
+ * Get Sent Requests (CV Dikirim - Outgoing)
  */
-export async function endTaarufSession(
-  userId: string,
-  sessionId: string,
-  reason: "COMPLETED" | "CANCELLED"
-) {
-  const supabase = await createClient();
-
-  // Verify user is part of session
-  const { data: session, error: fetchError } = await supabase
-    .from("taaruf_sessions")
-    .select("*")
-    .eq("id", sessionId)
-    .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .eq("status", "ACTIVE")
-    .single();
-
-  if (fetchError || !session) {
+export async function getSentRequests() {
+  try {
+    const supabase = await createClient();
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+        data: null,
+      };
+    }
+    
+    const { data: requests, error } = await supabase
+      .from("taaruf_requests")
+      .select(`
+        id,
+        to_user,
+        status,
+        created_at,
+        expires_at,
+        decided_at,
+        receiver:profiles!taaruf_requests_to_user_fkey (
+          user_id,
+          full_name,
+          gender,
+          cv_data!cv_data_user_id_fkey (
+            candidate_code,
+            birth_date,
+            education,
+            occupation
+          )
+        )
+      `)
+      .eq("from_user", user.id)
+      .in("status", ["PENDING", "ACCEPTED", "REJECTED"])
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      return {
+        success: false,
+        error: "Failed to fetch requests",
+        data: null,
+      };
+    }
+    
+    return {
+      success: true,
+      data: requests,
+    };
+    
+  } catch (error) {
+    console.error("Error fetching sent requests:", error);
     return {
       success: false,
-      error: "Sesi taaruf tidak ditemukan",
+      error: error instanceof Error ? error.message : "Failed to fetch requests",
       data: null,
     };
   }
+}
 
-  // Update session
-  const { data, error } = await supabase
-    .from("taaruf_sessions")
-    .update({
-      status: reason,
-      ended_at: new Date().toISOString(),
-    })
-    .eq("id", sessionId)
-    .select()
-    .single();
+/**
+ * Get Active Taaruf Sessions
+ */
+export async function getActiveTaaruf() {
+  try {
+    const supabase = await createClient();
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return {
+        success: false,
+        error: "Not authenticated",
+        data: null,
+      };
+    }
+    
+    const { data: sessions, error } = await supabase
+      .from("taaruf_sessions")
+      .select(`
+        id,
+        taaruf_code,
+        user_a,
+        user_b,
+        status,
+        started_at,
+        ended_at
+      `)
+      .or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+      .eq("status", "ACTIVE")
+      .order("started_at", { ascending: false });
+    
+    if (error) {
+      return {
+        success: false,
+        error: "Failed to fetch active taaruf",
+        data: null,
+      };
+    }
 
-  if (error) {
-    return { success: false, error: error.message, data: null };
+    // Get zoom schedules for each session from notifications
+    // TEMPORARY DISABLED FOR DEBUGGING
+    if (sessions && sessions.length > 0) {
+      try {
+        const sessionsWithZoom = await Promise.all(
+          sessions.map(async (session) => {
+            try {
+              // Find zoom schedule notifications for this user
+              const { data: zoomNotifications, error: notifError } = await supabase
+                .from("notifications")
+                .select("data")
+                .eq("user_id", user.id)
+                .eq("type", "ZOOM_SCHEDULED")
+                .order("created_at", { ascending: false });
+
+              if (notifError) {
+                console.error("Error fetching zoom notifications:", notifError);
+                // Return session without zoom schedules if query fails
+                return {
+                  ...session,
+                  zoom_schedules: [],
+                };
+              }
+
+              // Extract zoom schedules from notifications data
+              const zoom_schedules = zoomNotifications
+                ?.filter((notif: any) => notif.data?.taaruf_id && String(notif.data.taaruf_id) === String(session.id))
+                .map((notif: any) => ({
+                  stage: notif.data.stage,
+                  meeting_datetime: notif.data.meeting_datetime,
+                  zoom_link: notif.data.zoom_link,
+                  notes: notif.data.notes,
+                })) || [];
+
+              return {
+                ...session,
+                zoom_schedules,
+              };
+            } catch (err) {
+              console.error("Error processing zoom schedules for session:", session.id, err);
+              // Return session without zoom schedules if error
+              return {
+                ...session,
+                zoom_schedules: [],
+              };
+            }
+          })
+        );
+
+        return {
+          success: true,
+          data: sessionsWithZoom,
+        };
+      } catch (err) {
+        console.error("Error fetching zoom schedules:", err);
+        // If zoom schedule query fails, return sessions without schedules
+        return {
+          success: true,
+          data: sessions.map(s => ({ ...s, zoom_schedules: [] })),
+        };
+      }
+    }
+    
+    return {
+      success: true,
+      data: sessions || [],
+    };
+    
+  } catch (error) {
+    console.error("Error fetching active taaruf:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch active taaruf",
+      data: null,
+    };
   }
-
-  return {
-    success: true,
-    data,
-    error: null,
-    message: "Sesi taaruf telah diakhiri",
-  };
 }

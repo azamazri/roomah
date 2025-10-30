@@ -1,10 +1,57 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { checkRateLimit } from '@/lib/api/rate-limit'
+import { generateCsrfToken, setCsrfTokenCookie } from '@/lib/security/csrf'
 
 export async function middleware(request: NextRequest) {
+  // Generate X-Request-ID for correlation tracking (Web Crypto API - Edge Runtime compatible)
+  const requestId = crypto.randomUUID();
+  
   let supabaseResponse = NextResponse.next({
     request,
   })
+  
+  // Add Request ID to response headers
+  supabaseResponse.headers.set('X-Request-ID', requestId)
+  
+  // Rate limiting for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const { allowed, remaining, resetTime } = checkRateLimit(request, {
+      windowMs: 60 * 1000, // 1 minute
+      maxRequests: 100,
+    });
+    
+    if (!allowed) {
+      return new NextResponse(
+        JSON.stringify({
+          error: 'Too many requests',
+          retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': Math.ceil((resetTime - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': '100',
+            'X-RateLimit-Remaining': remaining.toString(),
+            'X-RateLimit-Reset': resetTime.toString(),
+            'X-Request-ID': requestId,
+          },
+        }
+      );
+    }
+    
+    // Add rate limit headers
+    supabaseResponse.headers.set('X-RateLimit-Limit', '100');
+    supabaseResponse.headers.set('X-RateLimit-Remaining', remaining.toString());
+    supabaseResponse.headers.set('X-RateLimit-Reset', resetTime.toString());
+  }
+  
+  // Set CSRF token for non-API routes
+  if (!request.nextUrl.pathname.startsWith('/api/')) {
+    const csrfToken = generateCsrfToken();
+    setCsrfTokenCookie(supabaseResponse, csrfToken);
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

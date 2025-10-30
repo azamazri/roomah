@@ -1,9 +1,9 @@
 // app/sitemap.ts
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/server/db/client";
 
 export default async function sitemap() {
-  const base = process.env.NEXT_PUBLIC_SITE_URL!;
-  const supabase = supabaseServer();
+  const base = process.env.NEXT_PUBLIC_SITE_URL || "https://roomah.netlify.app";
+  const supabase = await createClient();
 
   const { data } = await supabase
     .from("approved_candidates_v")

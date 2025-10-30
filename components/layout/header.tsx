@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export default function Header() {
@@ -10,10 +11,14 @@ export default function Header() {
           href="/"
           className="flex items-center gap-2 font-semibold text-lg"
         >
-          <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground text-sm font-bold rounded">
-            R
-          </div>
-          <span className="text-foreground">Roomah</span>
+          <Image
+            src="/images/logo_roomah.jpeg"
+            alt="Roomah Logo"
+            width={40}
+            height={40}
+            className="rounded object-contain"
+            priority
+          />
         </Link>
 
         {/* Main Navigation */}
@@ -59,4 +64,3 @@ export default function Header() {
     </header>
   );
 }
-

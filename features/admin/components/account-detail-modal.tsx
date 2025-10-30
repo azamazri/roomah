@@ -58,23 +58,25 @@ export function AccountDetailModal({
   if (!userId) return null;
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "approve":
+    switch (status?.toUpperCase()) {
+      case "APPROVED":
         return <Badge variant="success">Disetujui</Badge>;
-      case "review":
+      case "REVIEW":
         return <Badge variant="warning">Review</Badge>;
-      case "revisi":
+      case "REVISI":
         return <Badge variant="destructive">Revisi</Badge>;
+      case "DRAFT":
+        return <Badge variant="secondary">Draft</Badge>;
       default:
-        return <Badge variant="default">-</Badge>;
+        return <Badge variant="secondary">Belum Ada CV</Badge>;
     }
   };
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "taaruf_ajukan":
+      case "taaruf_request":
         return <Heart className="h-4 w-4 text-primary" />;
-      case "coin_topup":
+      case "coin_transaction":
         return <CreditCard className="h-4 w-4 text-success" />;
       case "cv_update":
         return <FileText className="h-4 w-4 text-info" />;
@@ -83,21 +85,9 @@ export function AccountDetailModal({
     }
   };
 
-  const getActivityLabel = (activity: unknown) => {
-    switch (activity.type) {
-      case "taaruf_ajukan":
-        return `Mengajukan Ta'aruf${
-          activity.targetKode ? ` ke ${activity.targetKode}` : ""
-        }`;
-      case "coin_topup":
-        return `Top up koin sebesar Rp ${activity.amount.toLocaleString(
-          "id-ID"
-        )}`;
-      case "cv_update":
-        return "Memperbarui CV";
-      default:
-        return "Aktivitas tidak dikenal";
-    }
+  const getActivityLabel = (activity: any) => {
+    // Use description from API
+    return activity.description || "Aktivitas tidak dikenal";
   };
 
   return (
@@ -117,13 +107,13 @@ export function AccountDetailModal({
           </div>
         </div>
       ) : account ? (
-        <div className="space-y-6">
+        <div className="space-y-6 px-2">
           {/* Basic Info Card */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-lg">Informasi Dasar</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -226,7 +216,7 @@ export function AccountDetailModal({
                           {getActivityLabel(activity)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(activity.at), {
+                          {activity.timestamp && formatDistanceToNow(new Date(activity.timestamp), {
                             addSuffix: true,
                             locale: id,
                           })}

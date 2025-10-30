@@ -28,6 +28,7 @@ interface CandidateTeaserProps {
   page: number;
   pageSize: number;
   baseUrl?: string;
+  currentUserId?: string;
   filters?: {
     gender?: string;
     ageRange?: string;
@@ -40,10 +41,20 @@ export default async function CandidateTeaser({
   page,
   pageSize,
   baseUrl = "/",
+  currentUserId,
   filters = {},
 }: CandidateTeaserProps) {
   // Parse filters for service
-  const serviceFilters: unknown = {};
+  const serviceFilters: any = {};
+  
+  // Gender filter - IKHWAN/AKHWAT to MALE/FEMALE
+  if (filters.gender) {
+    if (filters.gender === "IKHWAN") {
+      serviceFilters.gender = "MALE";
+    } else if (filters.gender === "AKHWAT") {
+      serviceFilters.gender = "FEMALE";
+    }
+  }
   
   // Education filter
   if (filters.education) {
@@ -68,29 +79,67 @@ export default async function CandidateTeaser({
   const primary = await listApprovedCandidates({
     page,
     limit: pageSize,
+    excludeUserId: currentUserId,
     ...serviceFilters,
   });
   
   // Map Candidate objects to CandidateSummary
-  let candidates: CandidateSummary[] = (primary.candidates || []).map((c: any) => ({
-    id: c.user_id || c.id,
-    kodeKandidat: c.candidate_code || `K${(c.user_id || c.id).slice(0, 6).toUpperCase()}`,
-    avatar: c.avatar_path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${c.avatar_path}` : null,
-    nama: c.full_name || "Kandidat",
-    umur: c.age || 0,
-    pekerjaan: c.occupation || "-",
-    domisili: c.province || "-",
-    pendidikan: c.education || "-",
-    kriteriaSingkat: `${c.education || "-"}`,
-    status: c.taaruf_status === "DALAM_PROSES" ? "Dalam Proses" as const : "Siap Bertaaruf" as const,
-    tanggalLahir: "-",
-    statusPernikahan: "Single" as const,
-    penghasilan: "Saat Taaruf" as const,
-    tinggiBadan: c.height_cm || 0,
-    beratBadan: c.weight_kg || 0,
-    riwayatPenyakit: [],
-    gender: c.gender_label === "MALE" ? "M" as const : "F" as const,
-  }));
+  let candidates: CandidateSummary[] = (primary.candidates || []).map((c: any) => {
+    // Format tanggal lahir dari birth_date jika ada
+    let tanggalLahir = "-";
+    if (c.birth_date) {
+      try {
+        const date = new Date(c.birth_date);
+        tanggalLahir = date.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric"
+        });
+      } catch (e) {
+        tanggalLahir = "-";
+      }
+    }
+
+    // Parse marital status dari enum
+    let statusPernikahan: "Single" | "Janda" | "Duda" = "Single";
+    if (c.marital_status === "JANDA") statusPernikahan = "Janda";
+    else if (c.marital_status === "DUDA") statusPernikahan = "Duda";
+
+    // Parse income bracket
+    let penghasilan: "0-2" | "2-5" | "5-10" | "10+" | "Saat Taaruf" = "Saat Taaruf";
+    if (c.income_bracket === "0_2") penghasilan = "0-2";
+    else if (c.income_bracket === "2_5") penghasilan = "2-5";
+    else if (c.income_bracket === "5_10") penghasilan = "5-10";
+    else if (c.income_bracket === "10_PLUS") penghasilan = "10+";
+
+    // Parse disease history - handle array, string, or null
+    let riwayatPenyakit: string[] = [];
+    if (Array.isArray(c.disease_history)) {
+      riwayatPenyakit = c.disease_history.filter(Boolean);
+    } else if (typeof c.disease_history === 'string' && c.disease_history.trim() !== '' && c.disease_history.toLowerCase() !== 'tidak ada') {
+      riwayatPenyakit = [c.disease_history];
+    }
+
+    return {
+      id: c.user_id || c.id,
+      kodeKandidat: c.candidate_code || `K${(c.user_id || c.id).slice(0, 6).toUpperCase()}`,
+      avatar: c.avatar_path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/cv-avatars/${c.avatar_path}` : null,
+      nama: c.full_name || "Kandidat",
+      umur: c.age || 0,
+      pekerjaan: c.occupation || "-",
+      domisili: c.province || "-",
+      pendidikan: c.education || "-",
+      kriteriaSingkat: `${c.education || "-"}`,
+      status: c.taaruf_status === "DALAM_PROSES" ? "Dalam Proses" as const : "Siap Bertaaruf" as const,
+      tanggalLahir,
+      statusPernikahan,
+      penghasilan,
+      tinggiBadan: c.height_cm || 0,
+      beratBadan: c.weight_kg || 0,
+      riwayatPenyakit,
+      gender: c.gender_label === "MALE" ? "M" as const : "F" as const,
+    };
+  });
   
   // Apply age filter client-side
   if (ageMin || ageMax) {
@@ -141,7 +190,7 @@ export default async function CandidateTeaser({
     const toAvatarUrl = (path?: string | null) => {
       if (!path) return null;
       const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      return `${base}/storage/v1/object/public/avatars/${encodeURIComponent(
+      return `${base}/storage/v1/object/public/cv-avatars/${encodeURIComponent(
         path
       )}`;
     };

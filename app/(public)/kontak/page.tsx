@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Metadata } from "next";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Note: Can't use export const metadata in client component, so this would need to be moved to a layout or parent server component
-// For now, we'll handle it at the layout level
+// Note: Metadata cannot be used in client components
 
 interface FormData {
   name: string;
@@ -47,7 +45,7 @@ export default function KontakPage() {
 
   return (
     <div className="section-y">
-      <div className="container-x">
+      <div className="container mx-auto px-4">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">

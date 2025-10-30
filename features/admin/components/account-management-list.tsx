@@ -70,15 +70,17 @@ export function AccountManagementList({
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "approve":
+    switch (status?.toUpperCase()) {
+      case "APPROVED":
         return <Badge variant="success">Disetujui</Badge>;
-      case "review":
+      case "REVIEW":
         return <Badge variant="warning">Review</Badge>;
-      case "revisi":
+      case "REVISI":
         return <Badge variant="destructive">Revisi</Badge>;
+      case "DRAFT":
+        return <Badge variant="secondary">Draft</Badge>;
       default:
-        return <Badge variant="default">-</Badge>;
+        return <Badge variant="secondary">Belum Ada</Badge>;
     }
   };
 

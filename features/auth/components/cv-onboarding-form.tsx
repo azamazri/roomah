@@ -232,19 +232,19 @@ export function CvOnboardingForm() {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-between pt-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:justify-between pt-6">
         <button
           type="button"
           onClick={handleSkip}
           disabled={isLoading}
-          className="px-6 py-2 text-muted-foreground hover:text-card-foreground border border-input rounded-md disabled:opacity-50"
+          className="w-full sm:w-auto px-6 py-2.5 text-sm sm:text-base text-muted-foreground hover:text-card-foreground border border-input rounded-md disabled:opacity-50 order-2 sm:order-1"
         >
           Lewati
         </button>
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-primary text-primary-foreground rounded-md px-6 py-2 font-medium hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none"
+          className="w-full sm:w-auto bg-primary text-primary-foreground rounded-md px-6 py-2.5 text-sm sm:text-base font-medium hover:bg-primary/90 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none order-1 sm:order-2"
         >
           {isLoading ? "Menyimpan..." : "Simpan & Lanjutkan"}
         </button>

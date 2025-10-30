@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { CvData } from "../types";
 import { loadCvData, saveCvData, uploadAvatar } from "@/server/actions/cv-details";
+import { getProvincesList } from "@/server/actions/provinces";
 import { toast } from "sonner";
 
 interface FormSection {
@@ -43,12 +44,19 @@ export function CvForm() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [riwayatPenyakit, setRiwayatPenyakit] = useState<string[]>([""]);
   const [kriteriaKhusus, setKriteriaKhusus] = useState<string[]>([""]);
+  const [provinces, setProvinces] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     const fetchCvData = async () => {
       try {
-        const data = await loadCvData();
+        // Load CV data and provinces in parallel
+        const [data, provincesList] = await Promise.all([
+          loadCvData(),
+          getProvincesList()
+        ]);
+        
         setCvData(data);
+        setProvinces(provincesList);
 
         if (data) {
           setRiwayatPenyakit(
@@ -240,14 +248,14 @@ export function CvForm() {
         </div>
       </Card>
 
-      {/* Admin Note */}
-      {cvData?.adminNote && cvData.status === "revisi" && (
+      {/* Admin Note - Show when there's a note (regardless of status) */}
+      {cvData?.adminNote && (
         <Card className="p-4 border-destructive bg-destructive/5">
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-medium text-destructive">
-                Catatan Revisi Admin
+                Catatan dari Admin
               </h3>
               <p className="text-sm text-destructive/80 mt-1">
                 {cvData.adminNote}
@@ -350,6 +358,26 @@ export function CvForm() {
 
               <div>
                 <label
+                  htmlFor="jenisKelamin"
+                  className="block text-sm font-medium mb-2"
+                >
+                  Jenis Kelamin *
+                </label>
+                <select
+                  id="jenisKelamin"
+                  name="jenisKelamin"
+                  defaultValue={cvData?.biodata.jenisKelamin || ""}
+                  required
+                  className="w-full"
+                >
+                  <option value="">Pilih Jenis Kelamin</option>
+                  <option value="IKHWAN">Ikhwan (Laki-laki)</option>
+                  <option value="AKHWAT">Akhwat (Perempuan)</option>
+                </select>
+              </div>
+
+              <div>
+                <label
                   htmlFor="statusPernikahan"
                   className="block text-sm font-medium mb-2"
                 >
@@ -384,13 +412,11 @@ export function CvForm() {
                   className="w-full"
                 >
                   <option value="">Pilih Provinsi</option>
-                  <option value="DKI Jakarta">DKI Jakarta</option>
-                  <option value="Jawa Barat">Jawa Barat</option>
-                  <option value="Jawa Tengah">Jawa Tengah</option>
-                  <option value="Jawa Timur">Jawa Timur</option>
-                  <option value="DI Yogyakarta">DI Yogyakarta</option>
-                  <option value="Banten">Banten</option>
-                  <option value="Sumatra Utara">Sumatra Utara</option>
+                  {provinces.map((province) => (
+                    <option key={province.id} value={province.name}>
+                      {province.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

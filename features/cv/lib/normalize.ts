@@ -5,7 +5,6 @@
  */
 export function toTitleCase(text: string): string {
   if (!text || typeof text !== "string") return "";
-
   return text
     .toLowerCase()
     .split(" ")

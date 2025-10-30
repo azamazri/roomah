@@ -126,45 +126,45 @@ export function OutboundList() {
   }
 
   return (
-    <Card className="divide-y divide-border">
+    <div className="space-y-4">
       {outboundItems.map((item) => {
         const statusInfo = getStatusInfo(item.status);
-        const StatusIcon = statusInfo.icon;
         const remainingTime = getRemainingTime(item.autoDeleteAt);
 
         return (
-          <div key={item.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="font-mono">
-                    {item.kodeKandidat}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>{formatDate(item.waktuPengajuan)}</span>
-                </div>
-
-                {remainingTime && item.status === "rejected" && (
-                  <div className="text-xs text-muted-foreground italic">
-                    {remainingTime}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <StatusIcon className={`h-4 w-4 ${statusInfo.className}`} />
-                  <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
-                </div>
-              </div>
+          <Card key={item.id} className="p-6">
+            {/* Baris 1: Kode Kandidat & Status */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xl font-bold text-foreground">
+                {item.kodeKandidat}
+              </h3>
+              <Badge variant={statusInfo.variant} className="text-sm px-3 py-1">
+                {statusInfo.label}
+              </Badge>
             </div>
-          </div>
+
+            {/* Baris 2: Waktu Pengajuan & Countdown/Info */}
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{formatDate(item.waktuPengajuan)}</span>
+              
+              {item.status === "pending" && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Waktu mundur {calculateTimeRemaining(item.waktuPengajuan)}</span>
+                </div>
+              )}
+              
+              {item.status === "rejected" && remainingTime && (
+                <div className="flex items-center gap-2 text-xs italic">
+                  <Clock className="h-4 w-4" />
+                  <span>{remainingTime}</span>
+                </div>
+              )}
+            </div>
+          </Card>
         );
       })}
-    </Card>
+    </div>
   );
 }
 

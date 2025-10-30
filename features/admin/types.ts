@@ -57,10 +57,9 @@ export type AccountDetail = AccountRow & {
 
 export type TaarufStage =
   | "Pengajuan"
-  | "Screening"
   | "Zoom 1"
   | "Zoom 2"
-  | "Keputusan"
+  | "Khitbah"
   | "Selesai";
 
 export type TaarufCard = {

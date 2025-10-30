@@ -9,13 +9,13 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div className="section-y">
-      <div className="container-x max-w-4xl">
+      <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">
             Syarat & Ketentuan
           </h1>
           <p className="text-xl text-muted-foreground">
-            Pedoman penggunaan platform Roomah untuk Ta'aruf yang berkah
+            Pedoman penggunaan platform Roomah untuk Taaruf yang berkah
           </p>
         </div>
 
@@ -39,7 +39,7 @@ export default function TermsPage() {
             <div className="space-y-4 text-muted-foreground">
               <p>
                 <strong>Roomah</strong> adalah platform digital yang
-                memfasilitasi proses Ta'aruf (perkenalan) antara Muslim dan
+                memfasilitasi proses Taaruf (perkenalan) antara Muslim dan
                 Muslimah yang memiliki niat serius untuk menikah.
               </p>
 
@@ -49,8 +49,8 @@ export default function TermsPage() {
               </p>
 
               <p>
-                <strong>Ta'aruf</strong> adalah proses perkenalan sesuai
-                syariat Islam dengan tujuan pernikahan.
+                <strong>Taaruf</strong> adalah proses perkenalan sesuai syariat
+                Islam dengan tujuan pernikahan.
               </p>
             </div>
           </section>
@@ -181,12 +181,12 @@ export default function TermsPage() {
 
             <div className="space-y-4 text-muted-foreground">
               <p>
-                Roomah menyediakan platform untuk memfasilitasi Ta'aruf,
-                namun tidak menjamin:
+                Roomah menyediakan platform untuk memfasilitasi Taaruf, namun
+                tidak menjamin:
               </p>
 
               <ul className="space-y-2">
-                <li>• Hasil atau keberhasilan proses Ta'aruf</li>
+                <li>• Hasil atau keberhasilan proses Taaruf</li>
                 <li>• Kesesuaian atau kompatibilitas pasangan</li>
                 <li>• Kebenaran 100% informasi yang diberikan pengguna lain</li>
                 <li>• Kelanjutan hubungan hingga pernikahan</li>
@@ -194,7 +194,7 @@ export default function TermsPage() {
 
               <p>
                 Roomah berkomitmen untuk menyediakan platform yang aman, namun
-                keputusan akhir tentang proses Ta'aruf sepenuhnya berada di
+                keputusan akhir tentang proses Taaruf sepenuhnya berada di
                 tangan pengguna dan keluarga masing-masing.
               </p>
             </div>
@@ -255,7 +255,7 @@ export default function TermsPage() {
                 <li>
                   • Tindakan pengguna lain yang melanggar syariat atau hukum
                 </li>
-                <li>• Kegagalan proses Ta'aruf atau hubungan</li>
+                <li>• Kegagalan proses Taaruf atau hubungan</li>
                 <li>
                   • Gangguan teknis atau kerusakan sistem yang tidak dapat
                   dihindari

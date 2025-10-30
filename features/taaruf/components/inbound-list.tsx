@@ -164,30 +164,14 @@ export function InboundList() {
 
   return (
     <>
-      <Card className="divide-y divide-border">
+      <div className="space-y-4">
         {inboundItems.map((item) => (
-          <div key={item.id} className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="font-mono">
-                    {item.kodeKandidat}
-                  </Badge>
-                  <Badge
-                    variant={
-                      item.status === "pending" ? "secondary" : "default"
-                    }
-                  >
-                    {item.status === "pending" ? "Menunggu" : item.status}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>{formatDate(item.waktuPengajuan)}</span>
-                </div>
-              </div>
-
+          <Card key={item.id} className="p-6">
+            {/* Baris 1: Kode Kandidat & Tombol Aksi */}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xl font-bold text-foreground">
+                {item.kodeKandidat}
+              </h3>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -222,9 +206,18 @@ export function InboundList() {
                 </Button>
               </div>
             </div>
-          </div>
+
+            {/* Baris 2: Waktu Pengajuan & Countdown */}
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{formatDate(item.waktuPengajuan)}</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Waktu mundur 7 hari</span>
+              </div>
+            </div>
+          </Card>
         ))}
-      </Card>
+      </div>
 
       {/* Candidate Modal */}
       {selectedCandidate && (

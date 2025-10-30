@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { AuthFormLogin } from "@/features/auth/components/auth-form-login";
 import { supabaseServer } from "@/lib/supabase/server";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Login - Roomah",
@@ -33,6 +35,16 @@ export default async function LoginPage({
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
+        {/* Back to Home Button */}
+        <div className="mb-4">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Beranda
+            </Button>
+          </Link>
+        </div>
+
         <AuthCard
           title="Selamat Datang di Roomah"
           subtitle="Masuk untuk melanjutkan"

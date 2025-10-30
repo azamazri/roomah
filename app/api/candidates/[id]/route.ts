@@ -7,11 +7,11 @@ import { createClient } from "@/server/db/client";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
-    const candidateId = params.id;
+    const { id: candidateId } = await params;
 
     if (!candidateId) {
       return NextResponse.json(

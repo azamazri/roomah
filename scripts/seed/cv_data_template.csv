@@ -1,0 +1,4 @@
+user_email,full_name,gender,birth_date,birth_place,current_city,province_id,phone
+john.ikhwan@example.com,Ahmad Rizki,IKHWAN,1995-05-15,Jakarta,Bandung,32,081234567890
+jane.akhwat@example.com,Siti Aminah,AKHWAT,1997-08-20,Surabaya,Surabaya,35,081298765432
+ali.muslim@example.com,Ali Rahman,IKHWAN,1993-12-10,Yogyakarta,Sleman,34,081233334444

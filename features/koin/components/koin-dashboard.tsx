@@ -41,20 +41,20 @@ interface TopUpPackage {
 
 const topUpPackages: TopUpPackage[] = [
   {
-    id: "package_5",
+    id: "PACKAGE_5",
     koin: 5,
     harga: 25000,
     label: "5 Koin",
   },
   {
-    id: "package_10",
+    id: "PACKAGE_10",
     koin: 10,
     harga: 50000,
     label: "10 Koin",
     popular: true,
   },
   {
-    id: "package_100",
+    id: "PACKAGE_100",
     koin: 100,
     harga: 100000,
     label: "100 Koin",
@@ -69,10 +69,28 @@ export function KoinDashboard() {
     null
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [snapLoaded, setSnapLoaded] = useState(false);
 
   // Ambil saldo saat mount
   useEffect(() => {
     fetchSaldoKoin();
+  }, []);
+
+  // Check if Snap is loaded
+  useEffect(() => {
+    const checkSnap = () => {
+      if (window.snap) {
+        setSnapLoaded(true);
+      }
+    };
+    
+    // Check immediately
+    checkSnap();
+    
+    // Also check after a delay (in case script is still loading)
+    const timer = setTimeout(checkSnap, 2000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchSaldoKoin = async () => {
@@ -100,7 +118,11 @@ export function KoinDashboard() {
   const handlePaymentConfirm = async () => {
     if (!selectedPackage) return;
     setIsProcessing(true);
+
     try {
+      console.log("🚀 Starting payment for package:", selectedPackage.id);
+
+      // Request Snap token from API
       const res = await fetch("/api/koin/create-transaction", {
         method: "POST",
         headers: {
@@ -109,14 +131,28 @@ export function KoinDashboard() {
         },
         body: JSON.stringify({ packageId: selectedPackage.id }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal membuat transaksi");
 
-      if (!window.snap) throw new Error("Midtrans Snap belum siap");
+      const json = await res.json();
+      console.log("📦 API Response:", json);
+
+      if (!res.ok) {
+        console.error("❌ API Error:", json.error);
+        throw new Error(json.error || "Gagal membuat transaksi");
+      }
+
+      // Check if Snap is loaded
+      if (!window.snap) {
+        console.error("❌ Midtrans Snap not loaded");
+        throw new Error("Midtrans Snap belum siap. Silakan refresh halaman.");
+      }
+
+      console.log("✅ Snap loaded, opening payment with token:", json.token);
       const orderId = json.orderId as string;
 
+      // Open Midtrans Snap popup
       window.snap.pay(json.token, {
-        onSuccess: async () => {
+        onSuccess: async (result) => {
+          console.log("✅ Payment success:", result);
           // konfirmasi ke server → credit saldo
           const cRes = await fetch("/api/koin/confirm", {
             method: "POST",
@@ -127,19 +163,30 @@ export function KoinDashboard() {
             body: JSON.stringify({ orderId }),
           });
           const cJson = await cRes.json();
-          if (!cRes.ok) throw new Error(cJson.error || "Konfirmasi gagal");
+          if (!cRes.ok) {
+            console.error("❌ Confirmation error:", cJson.error);
+            throw new Error(cJson.error || "Konfirmasi gagal");
+          }
 
           toast.success("Pembayaran berhasil! Saldo diperbarui.");
           await fetchSaldoKoin();
           setShowPaymentModal(false);
           setSelectedPackage(null);
         },
-        onPending: () =>
-          toast.message("Transaksi pending. Selesaikan pembayaran Anda."),
-        onError: () => toast.error("Pembayaran gagal. Silakan coba lagi."),
-        onClose: () => {},
+        onPending: (result) => {
+          console.log("⏳ Payment pending:", result);
+          toast.message("Transaksi pending. Selesaikan pembayaran Anda.");
+        },
+        onError: (result) => {
+          console.error("❌ Payment error:", result);
+          toast.error("Pembayaran gagal. Silakan coba lagi.");
+        },
+        onClose: () => {
+          console.log("🚪 Payment popup closed");
+        },
       });
     } catch (error) {
+      console.error("❌ Payment error:", error);
       toast.error(
         (error as Error).message || "Terjadi kesalahan. Silakan coba lagi."
       );
@@ -194,6 +241,13 @@ export function KoinDashboard() {
         src="https://app.sandbox.midtrans.com/snap/snap.js"
         data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
         strategy="afterInteractive"
+        onLoad={() => {
+          setSnapLoaded(true);
+        }}
+        onError={() => {
+          console.error("Failed to load Midtrans Snap script");
+          toast.error("Gagal memuat sistem pembayaran. Silakan refresh halaman.");
+        }}
       />
 
       <div className="space-y-6">
@@ -208,10 +262,6 @@ export function KoinDashboard() {
                 <h2 className="text-lg font-semibold text-foreground">
                   Saldo Koin Anda
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  Gunakan koin untuk mengajukan Ta'aruf (5 koin per
-                  pengajuan)
-                </p>
               </div>
             </div>
 
@@ -252,14 +302,9 @@ export function KoinDashboard() {
                     </p>
                   </div>
 
-                  <div className="text-sm text-muted-foreground">
-                    <p>• {pkg.koin} koin</p>
-                    <p>• {Math.floor(pkg.koin / 5)} kali ajukan Ta'aruf</p>
-                  </div>
-
                   <Button
                     onClick={() => handleTopUpClick(pkg)}
-                    className="w-full gap-2"
+                    className="w-full gap-2 mt-4"
                     variant={pkg.popular ? "default" : "outline"}
                   >
                     <CreditCard className="h-4 w-4" />
@@ -292,51 +337,76 @@ export function KoinDashboard() {
 
       {/* Payment Modal - Midtrans Sandbox */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Pembayaran</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 sm:space-y-3 px-0 sm:px-1">
+            <DialogTitle className="text-lg sm:text-xl font-semibold">
+              Konfirmasi Pembayaran
+            </DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Anda akan melakukan top-up koin dengan detail berikut:
             </DialogDescription>
           </DialogHeader>
 
           {selectedPackage && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Paket:</span>
-                  <span className="text-sm">{selectedPackage.label}</span>
+            <div className="space-y-4 sm:space-y-5 pt-3 sm:pt-4 px-0 sm:px-1">
+              {/* Package Details */}
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 sm:p-5 space-y-2 sm:space-y-3 border border-primary/20">
+                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Paket:
+                  </span>
+                  <span className="text-sm sm:text-base font-semibold">
+                    {selectedPackage.label}
+                  </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Jumlah Koin:</span>
-                  <span className="text-sm">{selectedPackage.koin} koin</span>
+                <div className="flex items-center justify-between py-2 border-b border-primary/10">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Jumlah Koin:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Coins className="h-4 w-4 text-primary" />
+                    <span className="text-sm sm:text-base font-semibold">
+                      {selectedPackage.koin} koin
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between font-medium">
-                  <span>Total Pembayaran:</span>
-                  <span className="text-primary">
+                <div className="flex items-center justify-between py-2 sm:py-3">
+                  <span className="text-sm sm:text-base font-semibold">
+                    Total Pembayaran:
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold text-primary">
                     {formatCurrency(selectedPackage.harga)}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 text-orange-800">
-                  <div className="w-4 h-4 bg-orange-200 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
+              {/* Sandbox Notice */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 sm:p-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Zap className="h-3 w-3 text-white" />
                   </div>
-                  <span className="text-sm font-medium">Mode Sandbox</span>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-amber-900 mb-1">
+                      Mode Sandbox (Testing)
+                    </h4>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      Ini adalah simulasi pembayaran untuk testing. Tidak ada
+                      transaksi uang sesungguhnya yang diproses.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-orange-700 mt-1">
-                  Ini adalah simulasi pembayaran untuk testing. Tidak ada
-                  transaksi sesungguhnya.
-                </p>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowPaymentModal(false)}
-                  className="flex-1"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedPackage(null);
+                  }}
+                  className="w-full sm:flex-1 h-11 text-sm sm:text-base order-2 sm:order-1"
                   disabled={isProcessing}
                 >
                   Batal
@@ -344,9 +414,19 @@ export function KoinDashboard() {
                 <Button
                   onClick={handlePaymentConfirm}
                   disabled={isProcessing}
-                  className="flex-1"
+                  className="w-full sm:flex-1 h-11 gap-2 text-sm sm:text-base order-1 sm:order-2"
                 >
-                  {isProcessing ? "Memproses..." : "Bayar Sekarang"}
+                  {isProcessing ? (
+                    <>
+                      <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span className="whitespace-nowrap">Memproses...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 flex-shrink-0" />
+                      <span className="whitespace-nowrap">Bayar Sekarang</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

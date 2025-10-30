@@ -1,0 +1,3 @@
+user_email,gender,full_name,birth_date,province_id,education,occupation,income_bracket,height_cm,weight_kg,marital_status,full_address,ciri_fisik,disease_history
+ahmad@example.com,IKHWAN,Ahmad Fauzan,1995-05-20,6,S1,Software Engineer,5_10,170,65,SINGLE,"Jl. Sudirman No. 123, Jakarta Selatan","Berkulit sawo matang, bermata coklat","[""Tidak Ada""]"
+fatimah@example.com,AKHWAT,Fatimah Azzahra,1998-08-15,9,S1,Guru SD,2_5,160,50,SINGLE,"Jl. Merdeka No. 45, Bandung","Berkulit putih, berkerudung","[""Tidak Ada""]"

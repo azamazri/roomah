@@ -1,10 +1,8 @@
 // app/admin/pengaturan/page.tsx
-import { requireAdmin } from "@/server/guards";
-import { ensureAdminRole } from "@/server/authz";
+import { requireAdmin } from "@/server/authz";
 
 export default async function AdminPengaturanPage() {
-  await requireAdmin("/admin/pengaturan");
-  await ensureAdminRole("SETTINGS");
+  await requireAdmin();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -23,9 +21,9 @@ export default async function AdminPengaturanPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div>
-                <p className="font-medium">Biaya Ta'aruf</p>
+                <p className="font-medium">Biaya Ta&apos;aruf</p>
                 <p className="text-sm text-muted-foreground">
-                  Biaya per pengajuan ta'aruf (dalam koin)
+                  Biaya per pengajuan ta&apos;aruf (dalam koin)
                 </p>
               </div>
               <span className="text-lg font-semibold">5 Koin</span>
@@ -82,3 +80,4 @@ export default async function AdminPengaturanPage() {
     </div>
   );
 }
+

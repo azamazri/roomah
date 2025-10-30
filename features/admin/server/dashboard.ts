@@ -327,3 +327,182 @@ export async function generateAdminReport(adminId: string) {
     );
   }
 }
+
+/**
+ * Wrapper functions for components (auto-fetch adminId from session)
+ */
+
+import { getCurrentUser } from "@/lib/supabase/server";
+
+export async function getKpiData() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new AppError(
+      ERROR_CODES.AUTH_UNAUTHORIZED,
+      "Unauthorized",
+      401
+    );
+  }
+
+  const supabase = createServiceClient();
+
+  // Get KPI data
+  const { count: totalUsers } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true });
+
+  const { count: approvedCV } = await supabase
+    .from("cv_data")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "APPROVED");
+
+  const { count: pendingCV } = await supabase
+    .from("cv_data")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "PENDING");
+
+  const { count: activeTaaruf } = await supabase
+    .from("taaruf_requests")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["PENDING", "ACCEPTED", "CONVERSATION"]);
+
+  // Get today's coin topup
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { data: topupToday } = await supabase
+    .from("koin_transactions")
+    .select("amount")
+    .eq("transaction_type", "TOP_UP")
+    .gte("created_at", today.toISOString());
+
+  const coinTopupToday = topupToday?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+  // Get MTD revenue
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const { data: revenueMTD } = await supabase
+    .from("koin_transactions")
+    .select("amount")
+    .eq("transaction_type", "TOP_UP")
+    .gte("created_at", firstDayOfMonth.toISOString());
+
+  const totalRevenueMTD = revenueMTD?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+
+  // Calculate profit (assume 70% profit margin)
+  const profitMTD = Math.round(totalRevenueMTD * 0.7);
+
+  return {
+    totalUsers: totalUsers || 0,
+    approvedCV: approvedCV || 0,
+    pendingCV: pendingCV || 0,
+    activeTaaruf: activeTaaruf || 0,
+    coinTopupToday,
+    revenueMTD: totalRevenueMTD,
+    profitMTD,
+  };
+}
+
+export async function getLatestTaaruf() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new AppError(
+      ERROR_CODES.AUTH_UNAUTHORIZED,
+      "Unauthorized",
+      401
+    );
+  }
+
+  const supabase = createServiceClient();
+
+  // Simple query without foreign key joins
+  const { data, error } = await supabase
+    .from("taaruf_requests")
+    .select(`
+      id,
+      status,
+      created_at,
+      from_user,
+      to_user
+    `)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("Get latest taaruf error:", error);
+    return [];
+  }
+
+  // Manually fetch user names
+  if (data && data.length > 0) {
+    const userIds = [...new Set([
+      ...data.map(t => t.from_user),
+      ...data.map(t => t.to_user)
+    ])];
+    
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", userIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+    return data.map(t => ({
+      id: t.id,
+      status: t.status,
+      created_at: t.created_at,
+      requester: { full_name: profileMap.get(t.from_user) || "Unknown" },
+      target: { full_name: profileMap.get(t.to_user) || "Unknown" }
+    }));
+  }
+
+  return data || [];
+}
+
+export async function getLatestTransactions() {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new AppError(
+      ERROR_CODES.AUTH_UNAUTHORIZED,
+      "Unauthorized",
+      401
+    );
+  }
+
+  const supabase = createServiceClient();
+
+  // Use payment_transactions table (not koin_transactions)
+  const { data, error } = await supabase
+    .from("payment_transactions")
+    .select(`
+      id,
+      package_id,
+      amount,
+      status,
+      created_at,
+      user_id
+    `)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  if (error) {
+    console.error("Get latest transactions error:", error);
+    return [];
+  }
+
+  // Manually fetch user names
+  if (data && data.length > 0) {
+    const userIds = [...new Set(data.map(t => t.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", userIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+
+    return data.map(t => ({
+      ...t,
+      user: { full_name: profileMap.get(t.user_id) || "Unknown" }
+    }));
+  }
+
+  return data || [];
+}

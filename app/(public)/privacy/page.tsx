@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <div className="section-y">
-      <div className="container-x max-w-4xl">
+      <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">
             Kebijakan Privasi
@@ -141,9 +141,7 @@ export default function PrivacyPage() {
 
               <ul className="space-y-2">
                 <li>• Dengan persetujuan eksplisit Anda</li>
-                <li>
-                  • Untuk memfasilitasi proses Ta'aruf yang Anda setujui
-                </li>
+                <li>• Untuk memfasilitasi proses Taaruf yang Anda setujui</li>
                 <li>
                   • Kepada penyedia layanan tepercaya yang membantu operasional
                   platform

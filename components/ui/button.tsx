@@ -36,6 +36,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       outline: "border border-input bg-background hover:bg-muted",
       ghost: "hover:bg-muted",
       link: "text-primary underline-offset-4 hover:underline",
+      destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
     };
 
     const sizeClasses = {

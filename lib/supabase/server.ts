@@ -85,9 +85,10 @@ export async function getCurrentUser() {
 }
 
 /**
- * Backward compatibility alias
+ * Backward compatibility aliases
  */
 export const supabaseServer = createClient;
+export const createServiceClient = createAdminClient;
 
 /**
  * Get the current user's profile

@@ -45,7 +45,7 @@ export const KOIN_PACKAGES = [
  * Get user koin balance from wallet_balances_v
  */
 export async function getKoinBalance(userId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("wallet_balances_v")
@@ -88,7 +88,7 @@ export async function getKoinBalance(userId: string) {
  * Returns Snap Token for payment
  */
 export async function initiateTopup(userId: string, packageId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Find package
   const selectedPackage = KOIN_PACKAGES.find((pkg) => pkg.id === packageId);
@@ -104,7 +104,7 @@ export async function initiateTopup(userId: string, packageId: string) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name, email")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
 
   if (profileError) {
@@ -116,20 +116,20 @@ export async function initiateTopup(userId: string, packageId: string) {
 
   try {
     // Create payment transaction record (for tracking)
+    // Insert to actual table koin_topup_orders, not the view
+    // Note: created_at has default value now(), so we don't set it manually
     const { error: txError } = await supabase
-      .from("payment_transactions")
+      .from("koin_topup_orders")
       .insert({
-        user_id: userId,
         order_id: orderId,
-        package_id: packageId,
-        amount: selectedPackage.amount,
-        koin_amount: selectedPackage.koin * 100, // Store in balance units
+        user_id: userId,
+        amount_cents: selectedPackage.koin * 100, // Store in balance units (cents)
         status: "PENDING",
-        payment_method: null,
-        created_at: new Date().toISOString(),
+        payment_type: null,
       });
 
     if (txError) {
+      console.error("Insert error details:", txError);
       throw new Error("Gagal membuat transaksi: " + txError.message);
     }
 
@@ -206,7 +206,7 @@ export async function initiateTopup(userId: string, packageId: string) {
  * Verify signature and process payment
  */
 export async function handleMidtransWebhook(payload: any) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     // 1. Verify signature
@@ -230,9 +230,9 @@ export async function handleMidtransWebhook(payload: any) {
       };
     }
 
-    // 2. Get transaction
+    // 2. Get transaction from actual table
     const { data: transaction, error: txError } = await supabase
-      .from("payment_transactions")
+      .from("koin_topup_orders")
       .select("*")
       .eq("order_id", orderId)
       .single();
@@ -270,33 +270,33 @@ export async function handleMidtransWebhook(payload: any) {
       finalStatus = "PENDING";
     }
 
-    // 4. Update transaction status
+    // 4. Update transaction status in actual table
     await supabase
-      .from("payment_transactions")
+      .from("koin_topup_orders")
       .update({
         status: finalStatus,
-        payment_method: payload.payment_type || null,
+        payment_type: payload.payment_type || null,
         updated_at: new Date().toISOString(),
       })
       .eq("order_id", orderId);
 
     // 5. Credit koin if success (idempotency check)
     if (shouldCredit) {
-      // Check if already credited
+      // Check if already credited using actual table
       const { data: existingCredit } = await supabase
-        .from("wallet_ledger_entries")
+        .from("wallet_transactions")
         .select("id")
-        .eq("transaction_type", "TOPUP")
+        .eq("reason", "TOPUP")
         .eq("description", `Top-up koin - Order ${orderId}`)
         .single();
 
       if (!existingCredit) {
-        // Credit to ledger
-        await supabase.from("wallet_ledger_entries").insert({
+        // Credit to ledger using actual table
+        await supabase.from("wallet_transactions").insert({
           user_id: transaction.user_id,
-          entry_type: "CREDIT",
-          amount: transaction.koin_amount,
-          transaction_type: "TOPUP",
+          type: "CREDIT",
+          amount_cents: transaction.amount_cents,
+          reason: "TOPUP",
           description: `Top-up koin - Order ${orderId}`,
           metadata: {
             order_id: orderId,
@@ -339,7 +339,7 @@ export async function getTransactionHistory(
     offset?: number;
   }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const limit = params?.limit || 20;
   const offset = params?.offset || 0;

@@ -5,13 +5,18 @@ import { formatDistanceToNow } from "date-fns";
 import { id } from "date-fns/locale";
 import { Heart } from "lucide-react";
 
-const stageColors = {
-  Pengajuan: "default",
-  Screening: "warning",
-  "Zoom 1": "info",
-  "Zoom 2": "info",
-  Keputusan: "warning",
-  Selesai: "success",
+const statusColors = {
+  PENDING: "warning",
+  ACCEPTED: "success",
+  REJECTED: "destructive",
+  EXPIRED: "default",
+} as const;
+
+const statusLabels = {
+  PENDING: "Menunggu",
+  ACCEPTED: "Diterima",
+  REJECTED: "Ditolak",
+  EXPIRED: "Kadaluarsa",
 } as const;
 
 export async function RecentTaaruf() {
@@ -36,24 +41,24 @@ export async function RecentTaaruf() {
           </div>
         ) : (
           <div className="space-y-4">
-            {taarufs.map((taaruf) => (
+            {taarufs.map((taaruf: any) => (
               <div
                 key={taaruf.id}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
               >
                 <div className="space-y-1 flex-1">
                   <div className="text-sm font-medium">
-                    {taaruf.pasanganKode[0]} × {taaruf.pasanganKode[1]}
+                    {taaruf.requester?.full_name || "Unknown"} × {taaruf.target?.full_name || "Unknown"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(taaruf.lastUpdate), {
+                    {formatDistanceToNow(new Date(taaruf.created_at), {
                       addSuffix: true,
                       locale: id,
                     })}
                   </div>
                 </div>
-                <Badge variant={stageColors[taaruf.stage]} className="text-xs">
-                  {taaruf.stage}
+                <Badge variant={statusColors[taaruf.status as keyof typeof statusColors] || "default"} className="text-xs">
+                  {statusLabels[taaruf.status as keyof typeof statusLabels] || taaruf.status}
                 </Badge>
               </div>
             ))}

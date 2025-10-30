@@ -113,29 +113,33 @@ export default function FilterBar({
   };
 
   const apply = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams();
 
-    // Handle regular filters
-    Object.entries(filters).forEach(([key, value]) => {
-      if (key === "gender") return; // Handle separately
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-    });
-
-    // Gender handling - convert M/F to IKHWAN/AKHWAT for database compatibility
+    // Gender handling - force opposite gender for approved users
+    // forceOppositeOfGender: "M" means show IKHWAN, "F" means show AKHWAT
     if (forceOppositeOfGender) {
-      const forced = forceOppositeOfGender === "M" ? "AKHWAT" : "IKHWAN";
+      const forced = forceOppositeOfGender === "M" ? "IKHWAN" : "AKHWAT";
       params.set("gender", forced);
-    } else if (filters.gender) {
+    } else if (filters.gender && filters.gender !== "") {
       params.set("gender", filters.gender);
-    } else {
-      params.delete("gender");
     }
 
+    // Apply other filters
+    if (filters.ageRange && filters.ageRange !== "") {
+      params.set("ageRange", filters.ageRange);
+    }
+    
+    if (filters.education && filters.education !== "") {
+      params.set("education", filters.education);
+    }
+    
+    if (filters.province && filters.province !== "") {
+      params.set("province", filters.province);
+    }
+
+    // Always reset to page 1 when applying filters
     params.set("page", "1");
+    
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 

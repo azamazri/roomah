@@ -18,6 +18,7 @@ interface AdminTableProps<T = Record<string, unknown>> {
   emptyMessage?: string;
   emptyIcon?: LucideIcon;
   className?: string;
+  renderRowFooter?: (item: T) => React.ReactNode;
 }
 
 export function AdminTable<T extends Record<string, unknown>>({
@@ -27,6 +28,7 @@ export function AdminTable<T extends Record<string, unknown>>({
   emptyMessage = "Tidak ada data",
   emptyIcon: EmptyIcon,
   className,
+  renderRowFooter,
 }: AdminTableProps<T>) {
   if (isLoading) {
     return (
@@ -88,6 +90,12 @@ export function AdminTable<T extends Record<string, unknown>>({
               </div>
             ))}
           </div>
+          {/* Row Footer - spans full width */}
+          {renderRowFooter && (
+            <div className="mt-4 pt-4 border-t border-border/50">
+              {renderRowFooter(item)}
+            </div>
+          )}
         </Card>
       ))}
     </div>

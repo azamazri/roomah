@@ -19,7 +19,7 @@ export async function signIn(
 ): Promise<SignInResult> {
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -29,6 +29,20 @@ export async function signIn(
       success: false,
       error: error.message,
     };
+  }
+
+  // Check if user is admin - admins can ONLY use email/password login
+  if (data.user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    // Admin validation passed - email/password is allowed
+    if (profile?.is_admin) {
+      console.log("Admin login successful via email/password");
+    }
   }
 
   return {

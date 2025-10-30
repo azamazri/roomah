@@ -25,7 +25,7 @@ export function CvVerificationList({ page, query }: CvVerificationListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { data, isLoading, error } = useCvVerification(page, query);
+  const { data, isLoading, error, mutate } = useCvVerification(page, query);
 
   const handleSearch = (newQuery: string) => {
     const params = new URLSearchParams(searchParams);
@@ -52,7 +52,8 @@ export function CvVerificationList({ page, query }: CvVerificationListProps) {
   const handleReviewComplete = () => {
     setSelectedCv(null);
     setReviewModalOpen(false);
-    // Data will be revalidated automatically
+    // Trigger revalidation to refresh the list
+    mutate();
   };
 
   if (error) {

@@ -13,10 +13,10 @@ export function useCvVerification(page = 1, q = "") {
   params.set("page", String(page));
   if (q) params.set("q", q);
 
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     `/api/admin/cv-queue?${params.toString()}`,
     fetcher
   );
 
-  return { data, error, isLoading };
+  return { data, error, isLoading, mutate };
 }

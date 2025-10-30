@@ -8,6 +8,8 @@ export interface CandidateFilters {
   maxAge?: number;
   education?: string;
   province?: string;
+  provinceId?: number;
+  excludeUserId?: string;
   page?: number;
   limit?: number;
 }
@@ -21,6 +23,9 @@ export async function listApprovedCandidates(filters: CandidateFilters = {}) {
   const limit = filters.limit || 12;
   const offset = (page - 1) * limit;
 
+  // Note: approved_candidates_v doesn't have taaruf_status column
+  // So we need to get all candidates first, then filter out those with DALAM_KHITBAH status
+  
   let query = supabase
     .from("approved_candidates_v")
     .select("*", { count: "exact" });
@@ -42,8 +47,17 @@ export async function listApprovedCandidates(filters: CandidateFilters = {}) {
     query = query.eq("education", filters.education);
   }
 
+  // Province filter - support both name and ID
   if (filters.province) {
     query = query.eq("province", filters.province);
+  } else if (filters.provinceId) {
+    // Query by province ID via join (need to check materialized view structure)
+    query = query.eq("province_id", filters.provinceId);
+  }
+
+  // Exclude current user from results (don't show own profile)
+  if (filters.excludeUserId) {
+    query = query.neq("user_id", filters.excludeUserId);
   }
 
   // Apply pagination
@@ -64,11 +78,42 @@ export async function listApprovedCandidates(filters: CandidateFilters = {}) {
     };
   }
 
-  const totalPages = count ? Math.ceil(count / limit) : 0;
+  // Filter out candidates with DALAM_KHITBAH status
+  // Need to fetch taaruf_status from cv_data table
+  let filteredData = data || [];
+  let adjustedCount = count || 0;
+  
+  if (filteredData.length > 0) {
+    const userIds = filteredData.map((c) => c.user_id);
+    
+    // Get taaruf_status for all candidates
+    const { data: cvStatuses } = await supabase
+      .from("cv_data")
+      .select("user_id, taaruf_status")
+      .in("user_id", userIds);
+    
+    // Create a map of user_id -> taaruf_status
+    const statusMap = new Map(
+      cvStatuses?.map((cv) => [cv.user_id, cv.taaruf_status]) || []
+    );
+    
+    // Filter out DALAM_KHITBAH candidates
+    const beforeCount = filteredData.length;
+    filteredData = filteredData.filter(
+      (candidate) => statusMap.get(candidate.user_id) !== "DALAM_KHITBAH"
+    );
+    const afterCount = filteredData.length;
+    
+    // Adjust total count
+    const removedCount = beforeCount - afterCount;
+    adjustedCount = Math.max(0, adjustedCount - removedCount);
+  }
+
+  const totalPages = adjustedCount ? Math.ceil(adjustedCount / limit) : 0;
 
   return {
-    candidates: data || [],
-    total: count || 0,
+    candidates: filteredData,
+    total: adjustedCount,
     page,
     limit,
     totalPages,

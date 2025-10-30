@@ -21,7 +21,7 @@ export function AdminPagination({
     const pages = [];
     const delta = 2; // Show 2 pages before and after current page
 
-    for (  const i = Math.max(1, currentPage - delta);
+    for (let i = Math.max(1, currentPage - delta);
       i <= Math.min(totalPages, currentPage + delta);
       i++
     ) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/server/db/client";
-import { getCvMasuk } from "@/features/taaruf/server/actions";
+import { getIncomingRequests } from "@/features/taaruf/server/actions";
 
 /**
  * GET /api/taaruf/inbound
@@ -24,7 +24,7 @@ export async function GET() {
     }
 
     // Fetch inbound requests
-    const result = await getCvMasuk(user.id);
+    const result = await getIncomingRequests();
 
     if (!result.success) {
       return NextResponse.json(

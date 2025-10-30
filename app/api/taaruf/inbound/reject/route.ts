@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/server/db/client";
-import { respondToTaarufRequest } from "@/features/taaruf/server/actions";
+import { rejectTaarufRequest } from "@/features/taaruf/server/actions";
 
 /**
  * POST /api/taaruf/inbound/reject
@@ -34,10 +34,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Use server action to respond
-    const result = await respondToTaarufRequest(
-      user.id,
+    const result = await rejectTaarufRequest(
       requestId,
-      "REJECTED",
       reason || "Tidak ada alasan diberikan"
     );
 

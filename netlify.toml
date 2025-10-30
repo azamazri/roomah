@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm install --legacy-peer-deps && npm run build"
   publish = ".next"
 
 [[plugins]]
@@ -8,6 +8,16 @@
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+  NEXT_USE_NETLIFY_EDGE = "false"
+  NEXT_FORCE_EDGE_RUNTIME = "false"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Environment variables hints (set these in Netlify dashboard)
 # NEXT_PUBLIC_SUPABASE_URL=your_supabase_url

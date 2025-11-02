@@ -1,5 +1,48 @@
 @import "tailwindcss";
 
+@layer theme {
+  :root {
+    /* Primary - Hijau Elegan Utama */
+    --primary: 155 45% 35%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary - Aksen Emas Lembut */
+    --secondary: 42 45% 88%;
+    --secondary-foreground: 155 45% 25%;
+
+    /* Accent - Cyan Sejuk */
+    --accent: 185 35% 85%;
+    --accent-foreground: 155 55% 20%;
+
+    /* Background - Minted White Lembut */
+    --background: 100 22% 97%;
+    --foreground: 155 15% 15%;
+
+    /* Muted */
+    --muted: 155 15% 96%;
+    --muted-foreground: 155 8% 45%;
+
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 155 15% 15%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 15% 15%;
+
+    /* Border & Input */
+    --border: 155 20% 88%;
+    --input: 155 20% 88%;
+
+    /* Ring focus */
+    --ring: 155 45% 35%;
+
+    /* Destructive */
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 98%;
+  }
+}
+
 /* =====================
    DESIGN TOKENS (HSL)
    ===================== */

@@ -44,16 +44,16 @@
     "@eslint/eslintrc": "^3",
     "@netlify/plugin-nextjs": "^5.14.4",
     "@next/bundle-analyzer": "^15.5.4",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@tailwindcss/postcss": "^4.1.16",
+    "@types/node": "^20.19.24",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.4",
     "prettier": "^3.6.2",
-    "tailwindcss": "^4.1.13",
+    "tailwindcss": "^4.1.16",
     "typescript": "^5.9.3"
   }
 }
